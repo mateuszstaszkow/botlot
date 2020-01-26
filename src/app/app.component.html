@@ -9,6 +9,7 @@
 <div *ngFor="let flight of flights">
   <ng-container *ngIf="flight.hotel && flight.weekend">
     <div class="flight-cell">City: {{ flight.city }}</div>
+    <div class="flight-cell">Country: {{ flight.country }}</div>
     <div class="flight-cell">Date: {{ flight.weekend.friday + ' / ' + flight.weekend.sunday }}</div>
     <div class="flight-cell">Cost: {{ flight.summary + ' (' + flight.cost + ' zł + ' + flight.hotel.cost + 'zł)' }}</div>
     <div class="flight-cell">Hotel: {{ flight.hotel.name }}</div>

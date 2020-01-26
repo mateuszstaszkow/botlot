@@ -10,17 +10,19 @@ import {concatMap, delay} from 'rxjs/operators';
 })
 export class AppComponent implements OnInit {
   title = 'botlot';
-  private readonly maxCost = 800;
+  private maxCost = 800;
   private readonly startingDay = 5;
   private readonly endingDay = 7;
-  private readonly startingHour = 16;
-  private readonly endingHour = 12;
+  private startingHour = 16;
+  private endingHour = 12;
   private readonly requestDebounce = 1000;
   private readonly url = 'https://flights-pa.clients6.google.com/$rpc/travel.frontend.flights.FlightsFrontendService/GetExploreDestinations';
   private body;
+  private readonly trivagoSuggestionsUrl = 'https://hsg-prod-eu.nsp.trv.cloud/api/mvp/suggestions';
   private readonly chopinBody = [null, [[76.41934825983552, 139.5465543889834], [-22.491412363792442, -110.7659456110166]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['WAW', 0]]], null, [16], 0, [], [], '2020-03-13', [360], []], [null, [[['WAW', 0]]], [12], 0, [], [], '2020-03-15', [360], []]], null, null, null, true], null, 1];
   private readonly warsawBody = [null, [[77.23040204073588, 138.8406804442027], [-19.165137143911153, -111.47181955579737]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['/m/081m_', 4]]], null, [16], 0, [], [], '2020-03-13', [360], []], [null, [[['/m/081m_', 4]]], [12], 0, [], [], '2020-03-15', [360], []]], null, null, null, true], null, 1];
   private readonly gdanskBody = [null, [[79.71547567273853, 123.61006707315732], [-7.031069335573834, -126.70243292684256]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['/m/035m6', 4]]], null, [16], 0, [], [], '2020-03-13', [360], []], [null, [[['/m/035m6', 4]]], [12], 0, [], [], '2020-03-15', [360], []]], null, null, null, true], null, 1];
+  private readonly holidayBody = [null, [[39.59828844794167, -36.06059763625916], [-70.80452417470768, 73.62690236374078]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['/m/081m_', 4]]], null, null, 0, [], [], '2020-03-20', [1500], []], [null, [[['/m/081m_', 4]]], null, 0, [], [], '2020-03-29', [1500], []]], null, null, null, true], null, 1];
   private readonly options: RequestInit = {
     'credentials': 'omit',
     'headers': {
@@ -30,7 +32,7 @@ export class AppComponent implements OnInit {
       'sec-fetch-mode': 'cors',
       'sec-fetch-site': 'same-site',
       'x-goog-api-key': 'AIzaSyBSuiOWj4xTH9RtdV1Np-pwYPyfGniSEOE',
-      'x-goog-upload-command': '["pl","PL","PLN",1,null,[-60]]',
+      'x-goog-upload-command': '["en","EN","PLN",1,null,[-60]]',
       'x-goog-upload-protocol': '["!MzClMBFC_JO5L4rs2HtYqTwix9Ww6G4CAAAAdFIAAAAkmQNL9wpZui-ZBLct7PMbiER3aQSrE29mhvFEVd712tMqdPsRvV6AxBZ2L0A_TU2jlNYPFdGXyGNxgbeT2a3pZcw1hHbExYux-ctfeE2jsWmc8-OgnPEMUtP4sisFqXinQA1B3hBLaVKEejH5GiQ71X9biU2txZLJLC4XUPK7XG7AqvrJGyDtfno9F74TXMJL_Hy6vjnoY7zWdxujNaws2WAijcADtqulWUhvrnrm1UisL1uR8y-JD-t8i-uIuIGvYaDtRpcadrCLcza50EAACZ2eqERWxTzDo9UUbtI8kViu48vvvR9btfEHyjVURZHNs-O5uwGYo-tRlUAZ8TZL_nMCQPj40WlWHTdUTiA8mxMW3t75s_XuRyAn3_j0XjuBVSziXbiA93d2SWxw5LL0oy8YjbwIFu38CRL8hlOSSwPMTKCVUCnkv2dJAP52i9n9BPoRmzOkUL2YgyM9xIg5CPiieETE8o10qJGphYEkteC09yEmTb45E2gTGu2RN1RrA6E2qwdkXwi9VmNlHBjX6SDsCdwpGVQrJS2ilLq1yxBhUnxLQsjxDCaluFtgbDRtSHnQCMs4BW0bL4iYTBxrBnc-MBYpDqEP9AzHrsoNjXUroRt_ds9YyREUWb-OPeVRBObrzoZrHaAZo470kD6Oms5-A8fzb30izFb07t45650WPvLUX3Pp-F_hOREMZwL-KVQq_QXVPBapUWTJAlfV6L6R7_UxH6MUZbSOipYiAfQc6DIYxXbUVkJrrCUdA1bD0pEx5BpNPMjwkbNcE7EEsn-XPAAr_3gJD3qDsnI1rOhz1bxZfwnRYpMOuLdDN2_NaB_ZF3W1dc9_t9PSwO1_kc8FlvzdOe1iVKZXEwrttgCP79HKKbn6VCKs_zhyNPmmijNw6arJo92n_BdSJpoS5KQP-6KIJ4kxoLE_mCp-rh3i7-G5_o6jDgBBgKn2OGVRDL5wtWAfJrTEpxXvSGLABftrjPL-RfGpUapHAx994ri3qVqVHzpl2KPcEY9jCg9F-MIxo7eb8useODRhOlbJm38bDsGq5mqMnDuP1NxV_M-QdPHC7Ih9q1I9QpJgBVX-xp9SHB0zK1F5N2tZ6FXpIDR1fM6cQ-OOO0t9hBF6",null,null,39,null,null,null,0,"1"]',
       'x-user-agent': 'grpc-web-javascript/0.1'
     },
@@ -41,7 +43,26 @@ export class AppComponent implements OnInit {
     'mode': 'cors'
   };
   private readonly trivagoUrl = 'https://cdn-hs-graphql-dus.trivago.com/graphql';
-  private readonly trivagoQueryParams = {
+  private readonly trivagoHolidayQueryParams = {
+    'tz': -60,
+    'pra': '',
+    'channel': 'b,isd:0',
+    'csid': 6,
+    'ccid': 'XioflSz5TVK58KfEesTVfwAAADU',
+    'adl': 3,
+    'crcl': '98.831276/8.018303,20000',
+    's': '1',
+    'uiv': '85523/200:1,1322/105:1,9/132:1,1527/106:1',
+    'tid': 'pBr9lypiYIJpKHvilusVtRmUy_',
+    'sp': '20201107/20201115',
+    'rms': '1',
+    'p': 'pl',
+    'l': 'pl',
+    'ccy': 'PLN',
+    'accoff': 0,
+    'acclim': 25
+  };
+  private trivagoQueryParams = {
     'tz': -60,
     'pra': '',
     'channel': 'b,isd:0',
@@ -105,19 +126,27 @@ export class AppComponent implements OnInit {
   };
   private readonly bannedCountries = [
     'Poland',
-    'United Kingdom',
-    'Ukraine',
-    'Germany',
-    'Portugal',
-    'Belgium',
-    'Hungary',
-    'Austria',
-    'Greece',
-    'Latvia',
-    'Slovakia',
-    'Romania',
-    'Moldova',
-    'Morocco'
+    // 'United Kingdom',
+    // 'Ukraine',
+    // 'Germany',
+    // 'Portugal',
+    // 'Belgium',
+    // 'Hungary',
+    // 'Austria',
+    // 'Greece',
+    // 'Latvia',
+    // 'Slovakia',
+    // 'Romania',
+    // 'Moldova',
+    // 'Morocco'
+  ];
+  private readonly bannedCities = [
+    // 'Kanton',
+    // 'Nowe Delhi',
+    // 'Hongkong',
+    // 'Bangkok',
+    // 'Tajpej',
+
   ];
   private readonly trivagoKeyByCity = {
     'Oslo': '25029/200:1,1322/105:1,1320/105:1,1318/105:1,2555/106:1',
@@ -158,8 +187,41 @@ export class AppComponent implements OnInit {
     'Petersburg': '1322/105:1,1320/105:1,1318/105:1,66877/200:1,2555/106:1',
     'Dubrownik': '1322/105:1,1320/105:1,1318/105:1,26879/200:1,2555/106:1',
     'Malta': '1322/105:1,1320/105:1,1318/105:1,123/200:1,2555/106:1',
-    'Sofia': '1322/105:1,1320/105:1,1318/105:1,15136/200:1,2555/106:1'
+    'Sofia': '1322/105:1,1320/105:1,1318/105:1,15136/200:1,2555/106:1',
+    'Dublin': '1322/105:1,1320/105:1,1318/105:1,20262/200:1,2555/106:1',
+    'Połąga': '1322/105:1,1320/105:1,1318/105:1,65752/200:1,2555/106:1',
+    'Shenzhen': '31491/200:1,1322/105:1,9/132:1,1527/106:1',
+    'Prowincja Krabi': '85523/200:1,1322/105:1,9/132:1,1527/106:1',
   };
+  private readonly trivagoSuggestionBody: any = {
+    'query': 'Bangko',
+    'limit': 5,
+    'platform': 'pl',
+    'metadata': {
+      'ctests': ['1443703219-1', '1448029553-1', '1459869632-1', '1472823160-1', '27291-1', '32046-1', '39578-1', '40402-1', '42164-1', '42280-1', '42673-1', '39875-1', '45749-1', '46135-1', '46164-1', '46411-1', '46587-1', '46876-1', '46535-1', '47123-1', '47357-1', '45124-1', '47748-1', '47225-1', '47405-1', '48329-1', '48491-1', '47828-1', '48405-1', '47908-1', '48700-1', '48542-1', '48506-1', '48531-1', '48681-1', '43316-1', '48673-1', '48921-1', '49476-1', '48467-1', '49419-1', '48401-1', '49490-1', '48404-1', '33651-1', '49915-1', '50200-1', '49791-1', '49492-1', '50182-1', '50198-1', '47794-1'],
+      'clientId': 'bp8GxP28vnxTZHEl6AiOCRKIs_',
+      'clientConnectionId': 'Xi3fuWPCrtKpqvdt5qog5wAAAEE',
+      'clientSequenceId': 23
+    },
+    'spellCorrection': true
+  };
+  private readonly trivagoSuggstionOptions: RequestInit = {
+    'credentials': 'omit',
+    'headers': {
+      'accept': 'application/json',
+      'accept-language': 'pl',
+      'content-type': 'text/plain',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'cross-site',
+      'x-trv-cst': '1443703219-1,1448029553-1,1459869632-1,1472823160-1,27291-1,32046-1,39578-1,40402-1,42164-1,42280-1,42673-1,39875-1,45749-1,46135-1,46164-1,46411-1,46587-1,46876-1,46535-1,47123-1,47357-1,45124-1,47748-1,47225-1,47405-1,48329-1,48491-1,47828-1,48405-1,47908-1,48700-1,48542-1,48506-1,48531-1,48681-1,43316-1,48673-1,48921-1,49476-1,48467-1,49419-1,48401-1,49490-1,48404-1,33651-1,49915-1,50200-1,49791-1,49492-1,50182-1,50198-1,47794-1'
+    },
+    'referrer': 'https://www.trivago.pl/?aDateRange%5Barr%5D=2020-11-07&aDateRange%5Bdep%5D=2020-11-15&aPriceRange%5Bfrom%5D=0&aPriceRange%5Bto%5D=0&iRoomType=1&aRooms%5B0%5D%5Badults%5D=1&cpt2=1322%2F105%2C1527%2F106%2C1324%2F106%2C9%2F132%2C15893%2F200&iViewType=0&bIsSeoPage=0&sortingId=2&slideoutsPageItemId=&iGeoDistanceLimit=20000&address=&addressGeoCode=&offset=0&ra=',
+    'referrerPolicy': 'no-referrer-when-downgrade',
+    'body': '',
+    'method': 'POST',
+    'mode': 'cors'
+  };
+
   private flights = [];
 
   ngOnInit(): void {
@@ -176,8 +238,10 @@ export class AppComponent implements OnInit {
     ).subscribe(weekend => {
       this.body[3][13][0][6] = weekend.friday;
       this.body[3][13][1][6] = weekend.sunday;
-      this.body[3][13][0][2][0] = this.startingHour;
-      this.body[3][13][1][2][0] = this.endingHour;
+      if (this.body[3][13][0][2]) {
+        this.body[3][13][0][2][0] = this.startingHour;
+        this.body[3][13][1][2][0] = this.endingHour;
+      }
       this.options.body = JSON.stringify(this.body);
       this.getFlights(weekend);
     });
@@ -202,7 +266,7 @@ export class AppComponent implements OnInit {
               weekend
             };
           })
-          .filter(flight => !this.bannedCountries.includes(flight.country))
+          .filter(flight => !this.bannedCountries.includes(flight.country) && !this.bannedCities.includes(flight.city))
         );
         if (weekend.isLast) {
           this.sendFlights();
@@ -223,17 +287,23 @@ export class AppComponent implements OnInit {
     // this.trivagoQueryParams.sp = this.mapToTrivagoDate(flight.weekend.friday) + '/' + this.mapToTrivagoDate(flight.weekend.sunday);
     // this.trivagoBody.variables.queryParams = <any>JSON.stringify(this.trivagoQueryParams);
     // this.trivagoOptions.body = JSON.stringify(this.trivagoBody);
-    const queryParams = { ...this.trivagoQueryParams };
-    const body = { ...this.trivagoBody, variables: { ...this.trivagoBody.variables } };
-    const options = { ...this.trivagoOptions };
-    queryParams.uiv = this.trivagoKeyByCity[flight.city];
-    queryParams.sp = this.mapToTrivagoDate(flight.weekend.friday) + '/' + this.mapToTrivagoDate(flight.weekend.sunday);
-    body.variables.queryParams = <any>JSON.stringify(queryParams);
-    options.body = JSON.stringify(body);
-    this.fetchHotelAndAssign(flight, options);
+    const queryParams = {...this.trivagoQueryParams};
+    const body = {...this.trivagoBody, variables: {...this.trivagoBody.variables}};
+    const options = {...this.trivagoOptions};
+    flight.invocations = 0;
+    this.getTrivagoCityCode(flight.city)
+      .then(code => {
+        queryParams.uiv = code;
+        queryParams.sp = this.mapToTrivagoDate(flight.weekend.friday) + '/' + this.mapToTrivagoDate(flight.weekend.sunday);
+        body.variables.queryParams = <any>JSON.stringify(queryParams);
+        options.body = JSON.stringify(body);
+        this.fetchHotelAndAssign(flight, options);
+      });
+    // queryParams.uiv = this.trivagoKeyByCity[flight.city];
   }
 
   private fetchHotelAndAssign(flight, options) {
+    flight.invocations++;
     fetch(this.trivagoUrl, options)
       .then(response => response.json())
       .then(response => {
@@ -244,6 +314,12 @@ export class AppComponent implements OnInit {
             this.flights.sort((a, b) => this.sortBySummary(a, b));
           }
           return;
+        } else if (!response.data.rs.pollData || flight.invocations > 10) {
+          if (flight.weekend.isLast) {
+            this.flights.sort((a, b) => this.sortBySummary(a, b));
+          }
+          this.flights.splice(this.flights.indexOf(flight), 1);
+          return;
         }
         this.fetchHotelAndAssign(flight, options);
       })
@@ -251,7 +327,7 @@ export class AppComponent implements OnInit {
   }
 
   private assignHotelToFlight(flight, hotel) {
-    const hotelData = { name: hotel.name.value, cost: hotel.deals.bestPrice.pricePerStay };
+    const hotelData = {name: hotel.name.value, cost: hotel.deals.bestPrice.pricePerStay};
     flight.summary = +flight.cost.split(' ')[0] + hotelData.cost;
     flight.hotel = hotelData;
   }
@@ -276,17 +352,38 @@ export class AppComponent implements OnInit {
     return 0;
   }
 
-  private buildRemainingWeekends(): Weekend[] {
-    // const today = new Date('2020-05-07');
-    // const weekends: Weekend[] = [];
-    // let friday = this.getNextDayOfWeek(today, this.startingDay);
-    // let sunday = this.getNextDayOfWeek(friday, this.endingDay);
-    // while (sunday.getDay() < 31 && sunday.getMonth() === 4) {
-    const today = new Date();
+  private buildRemainingWeekends(long = false): Weekend[] {
+    if (this.body === this.holidayBody) {
+      // tslint:disable-next-line:no-shadowed-variable
+      const today = new Date();
+      // tslint:disable-next-line:no-shadowed-variable
+      const weekends: Weekend[] = [];
+      this.startingHour = 0;
+      this.endingHour = 24;
+      this.maxCost = 3000;
+      this.trivagoQueryParams = this.trivagoHolidayQueryParams;
+      let firstDay = this.getNextDayOfWeek(today, 6);
+      let lastDay = this.getNextDayOfWeek(this.getNextDayOfWeek(firstDay, 1), 7);
+      while (lastDay.getFullYear() === today.getFullYear()) {
+        weekends.push({
+          friday: this.mapToISOStringDate(firstDay),
+          sunday: this.mapToISOStringDate(lastDay)
+        });
+        firstDay = this.getNextDayOfWeek(lastDay, 6);
+        lastDay = this.getNextDayOfWeek(this.getNextDayOfWeek(firstDay, 1), 7);
+      }
+      return weekends;
+    }
+    const today = new Date('2020-02-20');
     const weekends: Weekend[] = [];
     let friday = this.getNextDayOfWeek(today, this.startingDay);
     let sunday = this.getNextDayOfWeek(friday, this.endingDay);
-    while (sunday.getFullYear() === today.getFullYear()) {
+    while (sunday.getDay() < 31 && sunday.getMonth() === 1) {
+      // const today = new Date();
+      // const weekends: Weekend[] = [];
+      // let friday = this.getNextDayOfWeek(today, this.startingDay);
+      // let sunday = this.getNextDayOfWeek(friday, this.endingDay);
+      // while (sunday.getFullYear() === today.getFullYear()) {
       weekends.push({
         friday: this.mapToISOStringDate(friday),
         sunday: this.mapToISOStringDate(sunday)
@@ -315,6 +412,14 @@ export class AppComponent implements OnInit {
     return resultDate;
   }
 
+  private getTrivagoCityCode(name: string): Promise<string> {
+    const body = {...this.trivagoSuggestionBody, query: name};
+    const options = {...this.trivagoSuggstionOptions};
+    options.body = JSON.stringify(body);
+    return fetch(this.trivagoSuggestionsUrl, options)
+      .then(response => response.json())
+      .then(response => response.data.suggestions[0]);
+  }
 }
 
 export interface Weekend {
