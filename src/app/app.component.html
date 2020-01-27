@@ -7,12 +7,27 @@
 </div>
 <button mat-raised-button class="sort-button" (click)="sortFlights()">Sort</button>
 <div *ngFor="let flight of flights">
-  <ng-container *ngIf="flight.hotel && flight.weekend">
-    <div class="flight-cell">City: {{ flight.city }}</div>
-    <div class="flight-cell">Country: {{ flight.country }}</div>
-    <div class="flight-cell">Date: {{ flight.weekend.friday + ' / ' + flight.weekend.sunday }}</div>
-    <div class="flight-cell">Cost: {{ flight.summary + ' (' + flight.cost + ' zł + ' + flight.hotel.cost + 'zł)' }}</div>
-    <div class="flight-cell">Hotel: {{ flight.hotel.name }}</div>
+  <ng-container *ngIf="flight.hotel && flight.weekend && flight.arrival && flight.depart">
+    <div class="flight-cell">
+      <strong>City to:&nbsp;</strong>
+      {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
+    </div>
+    <div class="flight-cell">
+      <strong>City from:&nbsp;</strong>
+      {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
+    </div>
+    <div class="flight-cell">
+      <strong>Date:&nbsp;</strong>
+      {{ flight.weekend.friday + ' / ' + flight.weekend.sunday }}
+    </div>
+    <div class="flight-cell">
+      <strong>Cost:&nbsp;</strong>
+      {{ flight.summary + ' (' + flight.cost + ' zł + ' + flight.hotel.cost + ' zł)' }}
+    </div>
+    <div class="flight-cell">
+      <strong>Hotel:&nbsp;</strong>
+      {{ flight.hotel.name }}
+    </div>
     <hr/>
   </ng-container>
 </div>
