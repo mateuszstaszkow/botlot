@@ -5,6 +5,11 @@ export const WARSAW_BODY = [null, [[77.23040204073588, 138.8406804442027], [-19.
 export const GDANSK_BODY = [null, [[79.71547567273853, 123.61006707315732], [-7.031069335573834, -126.70243292684256]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['/m/035m6', 4]]], null, [16], 0, [], [], '2020-03-13', [360], []], [null, [[['/m/035m6', 4]]], [12], 0, [], [], '2020-03-15', [360], []]], null, null, null, true], null, 1];
 export const HOLIDAY_BODY = [null, [[40, -135], [-40, -134]], [], [null, null, 1, null, null, 1, [1], null, null, null, null, null, null, [[[[['/m/081m_', 4]]], null, null, 0, [], [], '2020-03-20', [1500], []], [null, [[['/m/081m_', 4]]], null, 0, [], [], '2020-03-29', [1500], []]], null, null, null, true], null, 1];
 
+export const TRIVAGO_ALL_INCUSIVE = ',1322/105:1,9/132:1,658/300:1,86/300:1,254/300:1,1324/106:1';
+export const TRIVAGO_5_STAR_BEACH = ',1322/105:1,9/132:1,1527/106:1';
+export const TRIVAGO_5_STAR = ',1322/105:1,2555/106:1';
+export const TRIVAGO_LOW_COST = ',1322/105:1,1320/105:1,1318/105:1,2555/106:1';
+
 export const GOOGLE_FLIGHTS_URL = 'https://flights-pa.clients6.google.com/$rpc/travel.frontend.flights.FlightsFrontendService/GetExploreDestinations';
 export const TRIVAGO_GRAPHQL_URL = 'https://cdn-hs-graphql-dus.trivago.com/graphql';
 export const TRIVAGO_SUGGESTIONS_URL = 'https://hsg-prod-eu.nsp.trv.cloud/api/mvp/suggestions';
@@ -59,7 +64,7 @@ export const TRIVAGO_QUERY_PARAMS = {
   'uiv': '25029/200:1,1322/105:1,1320/105:1,1318/105:1,2555/106:1',
   'tid': 'CZQDDZApuclWMGvz7q1FVTeiW_',
   'sp': '20200320/20200322',
-  'rms': '1',
+  'rms': '2',
   'p': 'pl',
   'l': 'pl',
   'ccy': 'PLN',

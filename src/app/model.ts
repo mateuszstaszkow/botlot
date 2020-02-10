@@ -7,7 +7,9 @@ export interface Weekend {
 }
 
 export interface Flight {
+  id: string;
   cost: string;
+  airline: string;
   arrival: Airport;
   depart: Airport;
   weekend: Weekend;

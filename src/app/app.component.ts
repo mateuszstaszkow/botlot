@@ -1,20 +1,22 @@
 import {Component, OnInit} from '@angular/core';
-import {from, of} from 'rxjs';
-import {concatMap} from 'rxjs/operators';
+import {from, Observable, of} from 'rxjs';
+import {concatMap, delay} from 'rxjs/operators';
 import {Flight, Hotel, Weekend} from './model';
 import {
+  CHOPIN_BODY,
   GOOGLE_FLIGHTS_OPTIONS,
   GOOGLE_FLIGHTS_URL,
   HOLIDAY_BODY,
+  TRIVAGO_ALL_INCUSIVE,
   TRIVAGO_BODY,
   TRIVAGO_GRAPHQL_URL,
   TRIVAGO_HOLIDAY_QUERY_PARAMS,
+  TRIVAGO_LOW_COST,
   TRIVAGO_OPTIONS,
   TRIVAGO_QUERY_PARAMS,
   TRIVAGO_SUGGESTIONS_BODY,
   TRIVAGO_SUGGESTIONS_OPTIONS,
-  TRIVAGO_SUGGESTIONS_URL,
-  WARSAW_BODY
+  TRIVAGO_SUGGESTIONS_URL
 } from './app-paths';
 
 @Component({
@@ -24,12 +26,15 @@ import {
 })
 export class AppComponent implements OnInit {
   title = 'botlot';
+  private readonly WIZZ_DISCOUNT_PLN = 43;
+  private readonly WIZZ_MIN_PRICE = 78;
   private readonly maxMinuteDistanceForCloseFlights = 2.5;
+  private readonly requestDebounce = 1000;
   private maxCost = 800;
   private readonly startingDay = 5;
   private readonly endingDay = 7;
-  private startingHour = 16;
-  private endingHour = 12;
+  private startingHour = 18;
+  private endingHour = 16;
   private body; // TODO: remove
   private trivagoQueryParams = TRIVAGO_QUERY_PARAMS; // TODO: remove
   private readonly bannedCountries = [
@@ -47,60 +52,95 @@ export class AppComponent implements OnInit {
     'Romania',
     'Moldova',
     'Morocco',
-    'France'
+    'France',
+    'United Arab Emirates'
   ];
   private readonly bannedCities = [
-    'Kanton',
-    'Nowe Delhi',
-    'Hongkong',
-    'Bangkok',
-    'Tajpej',
+    // 'Kanton',
+    // 'Nowe Delhi',
+    // 'Hongkong',
+    // 'Bangkok',
+    // 'Tajpej',
   ];
   private flights: Flight[] = [];
 
   ngOnInit(): void {
-    this.body = WARSAW_BODY;
+    this.body = CHOPIN_BODY;
     const weekends = this.buildRemainingWeekends();
     weekends[weekends.length - 1].isLast = true;
-    from(weekends).pipe(
-      concatMap(weekend => {
-        return of(weekend).pipe(
-          // delay(noisyDebounce)
-        );
-      })
-    ).subscribe(weekend => {
-      this.body[3][13][0][6] = weekend.friday;
-      this.body[3][13][1][6] = weekend.sunday;
-      if (this.body[3][13][0][2]) {
-        this.body[3][13][0][2][0] = this.startingHour;
-        this.body[3][13][1][2][0] = this.endingHour;
-      }
-      this.getFlights(weekend);
-    });
+    this.mapToDelayedObservableArray(weekends)
+      .subscribe((weekend: Weekend) => {
+        this.body[3][13][0][6] = weekend.friday;
+        this.body[3][13][1][6] = weekend.sunday;
+        if (this.body[3][13][0][2]) {
+          this.body[3][13][0][2][0] = this.startingHour;
+          this.body[3][13][1][2][0] = this.endingHour;
+        }
+        this.getFlights(weekend);
+      });
   }
 
   public sortFlights() {
     this.flights.sort((a, b) => this.sortBySummary(a, b));
   }
 
+  private mapToDelayedObservableArray<T>(objects: T[]): Observable<T | T[]> {
+    return from(objects).pipe(
+      concatMap(weekend => {
+        const noisyDebounce = this.requestDebounce + (100 - Math.floor(Math.random() * 200));
+        return of(weekend).pipe(
+          delay(noisyDebounce)
+        );
+      })
+    );
+  }
+
+  // TODO implement
   private getFlights(weekend: Weekend) {
     this.getRoundFlights(weekend);
-    // if (this.body === this.chopinBody) {
+    // if (this.body === CHOPIN_BODY || this.body === WARSAW_BODY) {
     //   this.getOneWayFlights(weekend);
     // }
   }
 
-  // private getOneWayFlights(weekend: Weekend) {
-  //   fetch(GOOGLE_FLIGHTS_URL, this.options)
-  //     .then(response => response.json())
-  //     .then(response => this.appendRoundFlight(weekend, response))
-  //     .catch(error => {
-  //       this.flights[this.flights.length - 1].weekend.isLast = true;
-  //       this.sendRoundFlights();
-  //     });
-  // }
+  // TODO implement
+  private getOneWayFlights(weekend: Weekend, flightId?) {
+    const options = this.buildOneWayFlightOptions();
+    fetch(GOOGLE_FLIGHTS_URL, options)
+      .then(response => response.json())
+      .then(response => this.buildFlights(weekend, response))
+      .then(flights => this.mapToDelayedObservableArray(flights)
+        .subscribe((flight: Flight) => this.appendOneWayFlight(flight, weekend)))
+      // .catch(error => {
+      //   this.flights[this.flights.length - 1].weekend.isLast = true;
+      //   this.sendRoundFlights();
+      // });
+  }
 
-  private getRoundFlights(weekend: Weekend, ) {
+  private appendOneWayFlight(flight: Flight, weekend: Weekend): void {
+    const options = this.buildOneWayFlightOptions(flight.id);
+    fetch(GOOGLE_FLIGHTS_URL, options)
+      .then(response => response.json())
+      .then(response => this.buildFlights(weekend, response)
+        .find(f => f.id === flight.id))
+      .then(returnFlight => console.log(returnFlight));
+  }
+
+  private buildOneWayFlightOptions(flightId?) {
+    const body = [ ...this.body ];
+    const airports = [ ...this.body[3] ];
+    const directionId = flightId ? 0 : 1;
+    airports[13] = [ ...this.body[3][13] ];
+    airports[13].splice(directionId, 1);
+    if (flightId) {
+      airports[13][0][0] = [[[ flightId, 4 ]]]; // TODO: what is 4?
+      airports[13][0][1] = null; // TODO: what is 4?
+    }
+    body[3] = airports;
+    return { ...GOOGLE_FLIGHTS_OPTIONS, body: JSON.stringify(body) };
+  }
+
+  private getRoundFlights(weekend: Weekend) {
     const options = { ...GOOGLE_FLIGHTS_OPTIONS, body: JSON.stringify(this.body) };
     fetch(GOOGLE_FLIGHTS_URL, options)
       .then(response => response.json())
@@ -111,13 +151,21 @@ export class AppComponent implements OnInit {
       });
   }
 
-  private appendRoundFlight(weekend: Weekend, response): void {
-    this.flights = this.flights.concat(response[0][1][4][0]
+  private buildFlights(weekend: Weekend, response): Flight[] {
+    return response[0][1][4][0]
       .filter(flightResponse => +flightResponse[1][0][1] < this.maxCost)
       .map((flightResponse): Flight => {
         const destination = response[0][0][3][0].find(d => d[0] === flightResponse[0]);
+        let cost = flightResponse[1][0][1];
+        const airline = flightResponse[6][1];
+        if (airline === 'Wizz Air') {
+          cost = cost - this.WIZZ_DISCOUNT_PLN;
+          cost = cost < this.WIZZ_MIN_PRICE ? this.WIZZ_MIN_PRICE : cost;
+        }
         return {
-          cost: flightResponse[1][0][1] + ' zł',
+          id: flightResponse[0],
+          cost: cost + ' zł',
+          airline,
           arrival: {
             city: destination[2],
             country: destination[4],
@@ -129,9 +177,13 @@ export class AppComponent implements OnInit {
           isRound: true,
           weekend
         };
-      })
-      .filter((flight: Flight) => !this.isAirportBanned(flight))
-    );
+      });
+  }
+
+  private appendRoundFlight(weekend: Weekend, response): void {
+    const properFlights = this.buildFlights(weekend, response)
+      .filter((flight: Flight) => !this.isAirportBanned(flight));
+    this.flights = this.flights.concat(properFlights);
     if (weekend.isLast) {
       this.sendRoundFlights();
     }
@@ -188,9 +240,11 @@ export class AppComponent implements OnInit {
   }
 
   private assignHotelToRoundFlight(flight: Flight, hotel) {
+    const cost = hotel.deals.bestPrice.pricePerStay;
+    const rms = +this.trivagoQueryParams.rms;
     const hotelData: Hotel = {
       name: hotel.name.value,
-      cost: hotel.deals.bestPrice.pricePerStay
+      cost: cost / rms
     };
     flight.summary = +flight.cost.split(' ')[0] + hotelData.cost;
     flight.hotel = hotelData;
@@ -273,10 +327,16 @@ export class AppComponent implements OnInit {
       .then(response => response.json())
       .then(response => {
         const qualityCodes = (this.body === HOLIDAY_BODY)
-          ? ',1322/105:1,9/132:1,1527/106:1'
-          : ',1322/105:1,1320/105:1,1318/105:1,2555/106:1';
+          ? TRIVAGO_ALL_INCUSIVE
+          : TRIVAGO_LOW_COST;
         return response.data.suggestions[0] + qualityCodes;
       });
   }
 }
 
+// TODO remove
+export function sleeper(ms) {
+  return function(x) {
+    return new Promise(resolve => setTimeout(() => resolve(x), ms));
+  };
+}
