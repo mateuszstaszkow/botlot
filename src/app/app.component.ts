@@ -16,7 +16,8 @@ import {
   TRIVAGO_QUERY_PARAMS,
   TRIVAGO_SUGGESTIONS_BODY,
   TRIVAGO_SUGGESTIONS_OPTIONS,
-  TRIVAGO_SUGGESTIONS_URL
+  TRIVAGO_SUGGESTIONS_URL,
+  WARSAW_BODY
 } from './app-paths';
 
 @Component({
@@ -26,6 +27,8 @@ import {
 })
 export class AppComponent implements OnInit {
   title = 'botlot';
+  private readonly HOTEL_MAX_DISTANCE_TO_CENTER = 3;
+  private readonly DECIMAL_DEGREE_TO_KM = 111.196672;
   private readonly WIZZ_DISCOUNT_PLN = 43;
   private readonly WIZZ_MIN_PRICE = 78;
   private readonly maxMinuteDistanceForCloseFlights = 2.5;
@@ -165,14 +168,16 @@ export class AppComponent implements OnInit {
         return {
           id: flightResponse[0],
           cost: cost + ' zł',
-          airline,
+          coordinates: [destination[1][1], destination[1][0]],
           arrival: {
             city: destination[2],
             country: destination[4],
+            airline,
           },
           depart: {
             city: destination[2],
             country: destination[4],
+            airline,
           },
           isRound: true,
           weekend
@@ -220,7 +225,7 @@ export class AppComponent implements OnInit {
     fetch(TRIVAGO_GRAPHQL_URL, options)
       .then(response => response.json())
       .then(response => {
-        const hotel = response.data.rs.accommodations.find(a => !a.accommodationType.value.includes('Hostel'));
+        const hotel = response.data.rs.accommodations.find(a => this.isNotHostelAndDistant(flight, a));
         if (hotel) {
           this.assignHotelToRoundFlight(flight, hotel);
           if (flight.weekend.isLast) {
@@ -239,15 +244,30 @@ export class AppComponent implements OnInit {
       .catch(error => this.flights.sort((a, b) => this.sortBySummary(a, b)));
   }
 
+  private isNotHostelAndDistant(flight: Flight, accommodation): boolean {
+    return !accommodation.accommodationType.value.includes('Hostel')
+      && this.calculateStraightDistanceInKilometers(
+        flight.coordinates,
+        [accommodation.geocode.lng, accommodation.geocode.lat]
+      ) < this.HOTEL_MAX_DISTANCE_TO_CENTER;
+  }
+
   private assignHotelToRoundFlight(flight: Flight, hotel) {
     const cost = hotel.deals.bestPrice.pricePerStay;
     const rms = +this.trivagoQueryParams.rms;
     const hotelData: Hotel = {
       name: hotel.name.value,
-      cost: cost / rms
+      cost: cost / rms,
+      coordinates: [hotel.geocode.lng, hotel.geocode.lat]
     };
     flight.summary = +flight.cost.split(' ')[0] + hotelData.cost;
     flight.hotel = hotelData;
+  }
+
+  private calculateStraightDistanceInKilometers(first: [number, number], second: [number, number]): number {
+    const x2 = Math.pow(first[0] - second[0], 2);
+    const y2 = Math.pow(first[1] - second[1], 2);
+    return Math.sqrt(x2 + y2) * this.DECIMAL_DEGREE_TO_KM;
   }
 
   private sortBySummary(a, b): number {
