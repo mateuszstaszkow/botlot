@@ -19,6 +19,7 @@ import {
   TRIVAGO_SUGGESTIONS_URL,
   WARSAW_BODY
 } from './app-paths';
+import {DetailedFlightService} from './detailed-flight.service';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,7 @@ import {
 })
 export class AppComponent implements OnInit {
   title = 'botlot';
+  private readonly HOME_COORDINATES = [20.979214, 52.231975];
   private readonly HOTEL_MAX_DISTANCE_TO_CENTER = 3;
   private readonly DECIMAL_DEGREE_TO_KM = 111.196672;
   private readonly WIZZ_DISCOUNT_PLN = 43;
@@ -36,13 +38,13 @@ export class AppComponent implements OnInit {
   private maxCost = 800;
   private readonly startingDay = 5;
   private readonly endingDay = 7;
-  private startingHour = 18;
-  private endingHour = 16;
+  private startingHour = 14;
+  private endingHour = 10;
   private body; // TODO: remove
   private trivagoQueryParams = TRIVAGO_QUERY_PARAMS; // TODO: remove
   private readonly bannedCountries = [
     'Poland',
-    'United Kingdom',
+    // 'United Kingdom',
     'Ukraine',
     'Germany',
     'Portugal',
@@ -59,6 +61,7 @@ export class AppComponent implements OnInit {
     'United Arab Emirates'
   ];
   private readonly bannedCities = [
+    'London'
     // 'Kanton',
     // 'Nowe Delhi',
     // 'Hongkong',
@@ -66,9 +69,12 @@ export class AppComponent implements OnInit {
     // 'Tajpej',
   ];
   private flights: Flight[] = [];
+  private flightDetailsLoading = false;
+
+  constructor(private readonly detailedFlightService: DetailedFlightService) { }
 
   ngOnInit(): void {
-    this.body = CHOPIN_BODY;
+    this.body = WARSAW_BODY;
     const weekends = this.buildRemainingWeekends();
     weekends[weekends.length - 1].isLast = true;
     this.mapToDelayedObservableArray(weekends)
@@ -121,11 +127,11 @@ export class AppComponent implements OnInit {
   }
 
   private appendOneWayFlight(flight: Flight, weekend: Weekend): void {
-    const options = this.buildOneWayFlightOptions(flight.id);
+    const options = this.buildOneWayFlightOptions(flight.arrival.endId);
     fetch(GOOGLE_FLIGHTS_URL, options)
       .then(response => response.json())
       .then(response => this.buildFlights(weekend, response)
-        .find(f => f.id === flight.id))
+        .find(f => f.arrival.endId === flight.arrival.endId))
       .then(returnFlight => console.log(returnFlight));
   }
 
@@ -154,6 +160,7 @@ export class AppComponent implements OnInit {
       });
   }
 
+  // TODO: implement one way
   private buildFlights(weekend: Weekend, response): Flight[] {
     return response[0][1][4][0]
       .filter(flightResponse => +flightResponse[1][0][1] < this.maxCost)
@@ -161,20 +168,24 @@ export class AppComponent implements OnInit {
         const destination = response[0][0][3][0].find(d => d[0] === flightResponse[0]);
         let cost = flightResponse[1][0][1];
         const airline = flightResponse[6][1];
+        const homeId = this.body[3][13][0][0][0][0][0];
         if (airline === 'Wizz Air') {
           cost = cost - this.WIZZ_DISCOUNT_PLN;
           cost = cost < this.WIZZ_MIN_PRICE ? this.WIZZ_MIN_PRICE : cost;
         }
         return {
-          id: flightResponse[0],
           cost: cost + ' zł',
           coordinates: [destination[1][1], destination[1][0]],
           arrival: {
+            startId: homeId,
+            endId: flightResponse[0],
             city: destination[2],
             country: destination[4],
             airline,
           },
           depart: {
+            startId: flightResponse[0],
+            endId: homeId,
             city: destination[2],
             country: destination[4],
             airline,
@@ -229,19 +240,44 @@ export class AppComponent implements OnInit {
         if (hotel) {
           this.assignHotelToRoundFlight(flight, hotel);
           if (flight.weekend.isLast) {
-            this.flights.sort((a, b) => this.sortBySummary(a, b));
+            this.updateFlightsWithAirportCoordinates();
           }
           return;
         } else if (!response.data.rs.pollData || flight.invocations > 10) {
           if (flight.weekend.isLast) {
-            this.flights.sort((a, b) => this.sortBySummary(a, b));
+            this.updateFlightsWithAirportCoordinates();
           }
           this.flights.splice(this.flights.indexOf(flight), 1);
           return;
         }
         this.fetchHotelAndAssignForRoundFlight(flight, options);
       })
-      .catch(error => this.flights.sort((a, b) => this.sortBySummary(a, b)));
+      .catch(error => this.updateFlightsWithAirportCoordinates());
+  }
+
+  private updateFlightsWithAirportCoordinates(): void {
+    if (this.flightDetailsLoading) {
+      return;
+    }
+    const rms = +this.trivagoQueryParams.rms;
+    this.flightDetailsLoading = true;
+    this.mapToDelayedObservableArray(this.flights)
+      .subscribe((flight: Flight) => this.detailedFlightService
+          .getDetailedFlightInfo(flight, String(this.startingHour), String(this.endingHour))
+          .pipe(
+            delay(this.requestDebounce)
+          ).subscribe(detailedFlight => {
+            flight.arrival.endDistance = Math.round(this
+              .calculateStraightDistanceInKilometers(detailedFlight.end.coordinates, flight.hotel.coordinates));
+            flight.arrival.startDistance = Math.round(this
+              .calculateStraightDistanceInKilometers(detailedFlight.start.coordinates, this.HOME_COORDINATES));
+            flight.summary += (flight.arrival.endDistance + flight.arrival.startDistance) * 2.5 / rms; // TODO: implement Uber
+            if (flight.weekend.isLast) {
+              this.sortFlights();
+              this.flightDetailsLoading = false;
+            }
+          })
+        );
   }
 
   private isNotHostelAndDistant(flight: Flight, accommodation): boolean {
@@ -264,7 +300,7 @@ export class AppComponent implements OnInit {
     flight.hotel = hotelData;
   }
 
-  private calculateStraightDistanceInKilometers(first: [number, number], second: [number, number]): number {
+  private calculateStraightDistanceInKilometers(first: [number, number] | number[], second: [number, number] | number[]): number {
     const x2 = Math.pow(first[0] - second[0], 2);
     const y2 = Math.pow(first[1] - second[1], 2);
     return Math.sqrt(x2 + y2) * this.DECIMAL_DEGREE_TO_KM;

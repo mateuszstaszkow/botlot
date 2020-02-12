@@ -7,7 +7,6 @@ export interface Weekend {
 }
 
 export interface Flight {
-  id: string;
   cost: string;
   coordinates: [number, number];
   arrival: Airport;
@@ -20,15 +19,29 @@ export interface Flight {
 }
 
 export interface Airport {
+  startId?: string;
+  endId?: string;
   city: string;
   country: string;
   airline?: string;
   coordinates?: [number, number];
-  distance?: number;
+  startDistance?: number;
+  endDistance?: number;
 }
 
 export interface Hotel {
   name: string;
   cost: number;
   coordinates: [number, number];
+}
+
+export interface DetailedAirport {
+  id: string;
+  name: string;
+  coordinates: number[];
+}
+
+export interface DetailedFlightAirports {
+  start: DetailedAirport;
+  end: DetailedAirport;
 }
