@@ -4,6 +4,27 @@
   min-width: 300px;
 }
 
+.flight-row-error {
+  color: gray;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.progress {
+  &-bar {
+    width: 75%;
+    display: inline-block;
+  }
+  &-info {
+    width: 10%;
+    margin: 1rem;
+    display: inline-block;
+  }
+}
+
 .sort-button {
-  margin-bottom: 1rem;
+  margin: 1rem;
+  width: 10%;
 }

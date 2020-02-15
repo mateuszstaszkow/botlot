@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {from, Observable, of} from 'rxjs';
 import {concatMap, delay} from 'rxjs/operators';
-import {Flight, Hotel, Weekend} from './model';
+import {DetailedFlightAirports, Flight, Hotel, Weekend} from './model';
 import {
   CHOPIN_BODY,
   GOOGLE_FLIGHTS_OPTIONS,
@@ -28,14 +28,16 @@ import {DetailedFlightService} from './detailed-flight.service';
 })
 export class AppComponent implements OnInit {
   title = 'botlot';
+  public currentFlights = 0;
+  public readonly requestDebounce = 1000;
   private readonly HOME_COORDINATES = [20.979214, 52.231975];
   private readonly HOTEL_MAX_DISTANCE_TO_CENTER = 3;
   private readonly DECIMAL_DEGREE_TO_KM = 111.196672;
   private readonly WIZZ_DISCOUNT_PLN = 43;
   private readonly WIZZ_MIN_PRICE = 78;
   private readonly maxMinuteDistanceForCloseFlights = 2.5;
-  private readonly requestDebounce = 1000;
-  private maxCost = 800;
+  private FLIGHT_COST_MAX = 800;
+  private HOTEL_COST_MAX = 1000;
   private readonly startingDay = 5;
   private readonly endingDay = 7;
   private startingHour = 14;
@@ -91,6 +93,13 @@ export class AppComponent implements OnInit {
 
   public sortFlights() {
     this.flights.sort((a, b) => this.sortBySummary(a, b));
+  }
+
+  public getProgress(): number {
+    if (!this.flights.length) {
+      return 0;
+    }
+    return Math.round(this.currentFlights / this.flights.length * 100);
   }
 
   private mapToDelayedObservableArray<T>(objects: T[]): Observable<T | T[]> {
@@ -163,7 +172,7 @@ export class AppComponent implements OnInit {
   // TODO: implement one way
   private buildFlights(weekend: Weekend, response): Flight[] {
     return response[0][1][4][0]
-      .filter(flightResponse => +flightResponse[1][0][1] < this.maxCost)
+      .filter(flightResponse => +flightResponse[1][0][1] < this.FLIGHT_COST_MAX)
       .map((flightResponse): Flight => {
         const destination = response[0][0][3][0].find(d => d[0] === flightResponse[0]);
         let cost = flightResponse[1][0][1];
@@ -227,65 +236,84 @@ export class AppComponent implements OnInit {
         queryParams.sp = this.mapToTrivagoDate(flight.weekend.friday) + '/' + this.mapToTrivagoDate(flight.weekend.sunday);
         body.variables.queryParams = <any>JSON.stringify(queryParams);
         options.body = JSON.stringify(body);
-        this.fetchHotelAndAssignForRoundFlight(flight, options);
+        this.fetchHotelAndAssignForRoundFlight(flight, options, body, queryParams);
       });
   }
 
-  private fetchHotelAndAssignForRoundFlight(flight, options) {
+  private fetchHotelAndAssignForRoundFlight(flight, options, body, queryParams) {
     flight.invocations++;
     fetch(TRIVAGO_GRAPHQL_URL, options)
       .then(response => response.json())
       .then(response => {
-        const hotel = response.data.rs.accommodations.find(a => this.isNotHostelAndDistant(flight, a));
+        const hotel = response.data.rs.accommodations.find(a => this.isNotHostelAndDistantAndExpensive(flight, a));
         if (hotel) {
           this.assignHotelToRoundFlight(flight, hotel);
           if (flight.weekend.isLast) {
             this.updateFlightsWithAirportCoordinates();
           }
           return;
-        } else if (!response.data.rs.pollData || flight.invocations > 10) {
+        } else if (response.data.rs.accommodations.length) {
+          queryParams.accoff += 25;
+          body.variables.queryParams = <any>JSON.stringify(queryParams);
+          options.body = JSON.stringify(body);
+          this.fetchHotelAndAssignForRoundFlight(flight, options, body, queryParams);
+        } else if (flight.invocations > 3) {
+          const index = this.flights.indexOf(flight);
+          if (index !== -1) {
+            this.flights.splice(index, 1);
+          }
           if (flight.weekend.isLast) {
             this.updateFlightsWithAirportCoordinates();
           }
-          this.flights.splice(this.flights.indexOf(flight), 1);
           return;
         }
-        this.fetchHotelAndAssignForRoundFlight(flight, options);
+        this.fetchHotelAndAssignForRoundFlight(flight, options, body, queryParams);
       })
       .catch(error => this.updateFlightsWithAirportCoordinates());
   }
 
   private updateFlightsWithAirportCoordinates(): void {
-    if (this.flightDetailsLoading) {
+    if (this.currentFlights) {
       return;
     }
-    const rms = +this.trivagoQueryParams.rms;
-    this.flightDetailsLoading = true;
+    this.currentFlights++;
     this.mapToDelayedObservableArray(this.flights)
       .subscribe((flight: Flight) => this.detailedFlightService
           .getDetailedFlightInfo(flight, String(this.startingHour), String(this.endingHour))
           .pipe(
             delay(this.requestDebounce)
-          ).subscribe(detailedFlight => {
-            flight.arrival.endDistance = Math.round(this
-              .calculateStraightDistanceInKilometers(detailedFlight.end.coordinates, flight.hotel.coordinates));
-            flight.arrival.startDistance = Math.round(this
-              .calculateStraightDistanceInKilometers(detailedFlight.start.coordinates, this.HOME_COORDINATES));
-            flight.summary += (flight.arrival.endDistance + flight.arrival.startDistance) * 2.5 / rms; // TODO: implement Uber
-            if (flight.weekend.isLast) {
-              this.sortFlights();
-              this.flightDetailsLoading = false;
-            }
-          })
+          ).subscribe(detailedFlight => this.calculateSummaryWithShuttle(flight, detailedFlight))
         );
   }
 
-  private isNotHostelAndDistant(flight: Flight, accommodation): boolean {
+  private calculateSummaryWithShuttle(flight: Flight, detailedFlight: DetailedFlightAirports): void {
+    const rms = +this.trivagoQueryParams.rms;
+    if (flight.hotel) {
+      flight.arrival.endDistance = Math.round(this
+        .calculateStraightDistanceInKilometers(detailedFlight.end.coordinates, flight.hotel.coordinates));
+    } else {
+      flight.arrival.endDistance = 0; // TODO: fix
+    }
+    flight.arrival.startDistance = Math.round(this
+      .calculateStraightDistanceInKilometers(detailedFlight.start.coordinates, this.HOME_COORDINATES));
+    flight.summary += (flight.arrival.endDistance + flight.arrival.startDistance) * 2.5 / rms; // TODO: implement Uber
+    if (++this.currentFlights === this.flights.length + 1) {
+      this.sortFlights();
+      this.flightDetailsLoading = false;
+    }
+  }
+
+  private isNotHostelAndDistantAndExpensive(flight: Flight, accommodation): boolean {
     return !accommodation.accommodationType.value.includes('Hostel')
+      && !this.isHotelExpensive(accommodation)
       && this.calculateStraightDistanceInKilometers(
         flight.coordinates,
         [accommodation.geocode.lng, accommodation.geocode.lat]
       ) < this.HOTEL_MAX_DISTANCE_TO_CENTER;
+  }
+
+  private isHotelExpensive(hotel): boolean {
+    return hotel.deals.bestPrice.pricePerStay > this.HOTEL_COST_MAX;
   }
 
   private assignHotelToRoundFlight(flight: Flight, hotel) {
@@ -323,7 +351,8 @@ export class AppComponent implements OnInit {
       const weekends: Weekend[] = [];
       this.startingHour = 0;
       this.endingHour = 24;
-      this.maxCost = 3000;
+      this.FLIGHT_COST_MAX = 3000;
+      this.HOTEL_COST_MAX = 3000;
       this.trivagoQueryParams = TRIVAGO_HOLIDAY_QUERY_PARAMS;
       let firstDay = this.getNextDayOfWeek(today, 6);
       let lastDay = this.getNextDayOfWeek(this.getNextDayOfWeek(firstDay, 1), 7);
