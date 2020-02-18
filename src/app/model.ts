@@ -27,6 +27,8 @@ export interface Airport {
   coordinates?: [number, number];
   startDistance?: number;
   endDistance?: number;
+  startTaxiCost?: number;
+  endTaxiCost?: number;
 }
 
 export interface Hotel {

@@ -64,7 +64,7 @@ export const TRIVAGO_QUERY_PARAMS = {
   'uiv': '25029/200:1,1322/105:1,1320/105:1,1318/105:1,2555/106:1',
   'tid': 'CZQDDZApuclWMGvz7q1FVTeiW_',
   'sp': '20200320/20200322',
-  'rms': '1',
+  'rms': '2',
   'p': 'pl',
   'l': 'pl',
   'ccy': 'PLN',

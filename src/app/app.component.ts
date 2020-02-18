@@ -20,6 +20,8 @@ import {
   WARSAW_BODY
 } from './app-paths';
 import {DetailedFlightService} from './detailed-flight.service';
+import {TaxiFareService} from './taxi-fare/taxi-fare.service';
+import {TaxiFareResponseDto} from './taxi-fare/taxi-fare-response.dto';
 
 @Component({
   selector: 'app-root',
@@ -29,10 +31,16 @@ import {DetailedFlightService} from './detailed-flight.service';
 export class AppComponent implements OnInit {
   title = 'botlot';
   public currentFlights = 0;
+  public taxiRequestTime = 0;
+  public distinctCities: string[];
   public readonly requestDebounce = 1000;
+  private readonly TAXI_REQUEST_DEBOUNCE = 500;
+  private readonly WARSAW_TAXI_RATE_PER_KM = 2.4; // TODO: fetch
+  private readonly WARSAW_TAXI_STARTING_COST = 8; // TODO: fetch
   private readonly HOME_COORDINATES = [20.979214, 52.231975];
   private readonly HOTEL_MAX_DISTANCE_TO_CENTER = 3;
   private readonly DECIMAL_DEGREE_TO_KM = 111.196672;
+  private readonly DISTANCE_THRESHOLD = 20;
   private readonly WIZZ_DISCOUNT_PLN = 43;
   private readonly WIZZ_MIN_PRICE = 78;
   private readonly maxMinuteDistanceForCloseFlights = 2.5;
@@ -64,16 +72,13 @@ export class AppComponent implements OnInit {
   ];
   private readonly bannedCities = [
     'London'
-    // 'Kanton',
-    // 'Nowe Delhi',
-    // 'Hongkong',
-    // 'Bangkok',
-    // 'Tajpej',
   ];
   private flights: Flight[] = [];
   private flightDetailsLoading = false;
 
-  constructor(private readonly detailedFlightService: DetailedFlightService) { }
+  constructor(private readonly detailedFlightService: DetailedFlightService,
+              private readonly taxiFareService: TaxiFareService
+  ) { }
 
   ngOnInit(): void {
     this.body = WARSAW_BODY;
@@ -102,11 +107,18 @@ export class AppComponent implements OnInit {
     return Math.round(this.currentFlights / this.flights.length * 100);
   }
 
-  private mapToDelayedObservableArray<T>(objects: T[]): Observable<T | T[]> {
-    return from(objects).pipe(
-      concatMap(weekend => {
+  public getTaxiProgress(): number {
+    if (!this.distinctCities || !this.distinctCities.length) {
+      return 0;
+    }
+    return Math.round(this.taxiRequestTime / this.distinctCities.length / this.TAXI_REQUEST_DEBOUNCE * 100000);
+  }
+
+  private mapToDelayedObservableArray<T>(elements: T[]): Observable<T | T[]> {
+    return from(elements).pipe(
+      concatMap(element => {
         const noisyDebounce = this.requestDebounce + (100 - Math.floor(Math.random() * 200));
-        return of(weekend).pipe(
+        return of(element).pipe(
           delay(noisyDebounce)
         );
       })
@@ -190,6 +202,8 @@ export class AppComponent implements OnInit {
             endId: flightResponse[0],
             city: destination[2],
             country: destination[4],
+            startDistance: 0,
+            endDistance: 0,
             airline,
           },
           depart: {
@@ -197,6 +211,8 @@ export class AppComponent implements OnInit {
             endId: homeId,
             city: destination[2],
             country: destination[4],
+            startDistance: 0,
+            endDistance: 0,
             airline,
           },
           isRound: true,
@@ -280,14 +296,38 @@ export class AppComponent implements OnInit {
     this.mapToDelayedObservableArray(this.flights)
       .subscribe((flight: Flight) => this.detailedFlightService
           .getDetailedFlightInfo(flight, String(this.startingHour), String(this.endingHour))
-          .pipe(
-            delay(this.requestDebounce)
-          ).subscribe(detailedFlight => this.calculateSummaryWithShuttle(flight, detailedFlight))
+          .subscribe(body => {
+            const flights = body[2][2][0];
+            const airports = body[3][0];
+            if (!flights) {
+              // TODO: retry query
+              this.currentFlights++;
+              flight.arrival.endDistance = 0;
+              flight.arrival.startDistance = 0;
+              return;
+            }
+            const cheapestFlight = flights[0][0][4];
+            const lastCheapestFlight = cheapestFlight[cheapestFlight.length - 1];
+            const cheapestStart = airports.find(airport => airport[0] === cheapestFlight[0][0]);
+            const cheapestEnd = airports.find(airport => airport[0] === lastCheapestFlight[1]);
+            const detailedFlight = {
+              start: {
+                id: cheapestStart[0],
+                name: cheapestStart[1],
+                coordinates: [cheapestStart[12], cheapestStart[11]]
+              },
+              end: {
+                id: cheapestEnd[0],
+                name: cheapestEnd[1],
+                coordinates: [cheapestEnd[12], cheapestEnd[11]]
+              }
+            };
+            this.calculateSummaryWithShuttle(flight, detailedFlight, flights);
+          })
         );
   }
 
-  private calculateSummaryWithShuttle(flight: Flight, detailedFlight: DetailedFlightAirports): void {
-    const rms = +this.trivagoQueryParams.rms;
+  private calculateSummaryWithShuttle(flight: Flight, detailedFlight: DetailedFlightAirports, flights: any): void {
     if (flight.hotel) {
       flight.arrival.endDistance = Math.round(this
         .calculateStraightDistanceInKilometers(detailedFlight.end.coordinates, flight.hotel.coordinates));
@@ -296,11 +336,45 @@ export class AppComponent implements OnInit {
     }
     flight.arrival.startDistance = Math.round(this
       .calculateStraightDistanceInKilometers(detailedFlight.start.coordinates, this.HOME_COORDINATES));
-    flight.summary += (flight.arrival.endDistance + flight.arrival.startDistance) * 2.5 / rms; // TODO: implement Uber
-    if (++this.currentFlights === this.flights.length + 1) {
-      this.sortFlights();
-      this.flightDetailsLoading = false;
+    // TODO: calculate taxi cost for single case - not so important
+    if (flight.arrival.startDistance > this.DISTANCE_THRESHOLD || flight.arrival.endDistance > this.DISTANCE_THRESHOLD) {
+      // TODO calculate
     }
+    if (++this.currentFlights === this.flights.length + 1) {
+      const taxiProgressIntervalDelay = 100;
+      const id = setInterval(() => {
+        this.taxiRequestTime += taxiProgressIntervalDelay / 1000;
+        if (this.taxiRequestTime > this.distinctCities.length) {
+          clearInterval(id);
+        }
+      }, taxiProgressIntervalDelay);
+      const cities = this.flights.map(f => f.arrival.city); // TODO: implement one way
+      this.distinctCities = Array.from(new Set(cities));
+      this.taxiFareService.getTaxiFaresForCities(this.distinctCities)
+        .subscribe(response => {
+          this.flights.filter(f => f.hotel && f.arrival.endDistance && f.arrival.startDistance)
+            .forEach(f => f.summary += this.setTaxiCostsAndCalculateTaxiSummary(f, response));
+          this.flights.filter(f => f.hotel && (!f.arrival.endDistance || !f.arrival.startDistance))
+            .forEach(errorFlight => {
+              const similarFlight = this.flights.find(f => f.hotel.name === errorFlight.hotel.name
+                && f.arrival.city === errorFlight.arrival.city);
+              errorFlight.arrival.startDistance = similarFlight.arrival.startDistance;
+              errorFlight.arrival.endDistance = similarFlight.arrival.endDistance;
+            });
+          this.sortFlights();
+          this.flightDetailsLoading = false;
+        });
+    }
+  }
+
+  private setTaxiCostsAndCalculateTaxiSummary(flight: Flight, fareResponseDto: TaxiFareResponseDto): number {
+    const rms = +this.trivagoQueryParams.rms;
+    const fare = fareResponseDto.faresByCities[flight.arrival.city];
+    flight.arrival.startTaxiCost = Math
+      .round((flight.arrival.startDistance * this.WARSAW_TAXI_RATE_PER_KM + this.WARSAW_TAXI_STARTING_COST) / rms);
+    flight.arrival.endTaxiCost = Math
+      .round((flight.arrival.endDistance * fare.costPerKilometer.mean + fare.startingCost.mean) / rms);
+    return flight.arrival.startTaxiCost + flight.arrival.endTaxiCost;
   }
 
   private isNotHostelAndDistantAndExpensive(flight: Flight, accommodation): boolean {
@@ -313,7 +387,8 @@ export class AppComponent implements OnInit {
   }
 
   private isHotelExpensive(hotel): boolean {
-    return hotel.deals.bestPrice.pricePerStay > this.HOTEL_COST_MAX;
+    const rms = +this.trivagoQueryParams.rms;
+    return hotel.deals.bestPrice.pricePerStay > (this.HOTEL_COST_MAX * rms);
   }
 
   private assignHotelToRoundFlight(flight: Flight, hotel) {
@@ -321,7 +396,7 @@ export class AppComponent implements OnInit {
     const rms = +this.trivagoQueryParams.rms;
     const hotelData: Hotel = {
       name: hotel.name.value,
-      cost: cost / rms,
+      cost: Math.round(cost / rms),
       coordinates: [hotel.geocode.lng, hotel.geocode.lat]
     };
     flight.summary = +flight.cost.split(' ')[0] + hotelData.cost;
@@ -366,16 +441,16 @@ export class AppComponent implements OnInit {
       }
       return weekends;
     }
-    const today = new Date('2020-05-07');
-    const weekends: Weekend[] = [];
-    let friday = this.getNextDayOfWeek(today, this.startingDay);
-    let sunday = this.getNextDayOfWeek(friday, this.endingDay);
-    while (sunday.getDay() < 31 && sunday.getMonth() === 4) {
-    //   const today = new Date();
-    //   const weekends: Weekend[] = [];
-    //   let friday = this.getNextDayOfWeek(today, this.startingDay);
-    //   let sunday = this.getNextDayOfWeek(friday, this.endingDay);
-    //   while (sunday.getFullYear() === today.getFullYear()) {
+    // const today = new Date('2020-07-01');
+    // const weekends: Weekend[] = [];
+    // let friday = this.getNextDayOfWeek(today, this.startingDay);
+    // let sunday = this.getNextDayOfWeek(friday, this.endingDay);
+    // while (sunday.getDate() < 7 && sunday.getMonth() === 6) {
+      const today = new Date();
+      const weekends: Weekend[] = [];
+      let friday = this.getNextDayOfWeek(today, this.startingDay);
+      let sunday = this.getNextDayOfWeek(friday, this.endingDay);
+      while (sunday.getFullYear() === today.getFullYear()) {
       weekends.push({
         friday: this.mapToISOStringDate(friday),
         sunday: this.mapToISOStringDate(sunday)

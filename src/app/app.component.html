@@ -21,11 +21,30 @@
         {{ progress + ' %' + '(time left: ' + (flights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
       </span>
     </ng-container>
+    <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">
+      <ng-container *ngIf="getTaxiProgress() as taxiProgress">
+        <ng-container *ngIf="taxiProgress < 100">
+          <mat-progress-bar class="progress-bar"
+                            mode="determinate"
+                            color="warn"
+                            [value]="taxiProgress">
+          </mat-progress-bar>
+          <span class="progress-info">
+            {{ taxiProgress + ' %' + '(time left: ' + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)' }}
+          </span>
+        </ng-container>
+        <ng-container *ngIf="taxiProgress >= 100">
+          {{ flights.length + ' results:' }}
+        </ng-container>
+      </ng-container>
+    </ng-container>
   </ng-container>
 </div>
 <div *ngFor="let flight of flights">
   <div *ngIf="flight.hotel && flight.weekend && flight.arrival && flight.depart"
-       [class.flight-row-error]="!flight.arrival.endDistance">
+       [class.flight-row-error]="!flight.hotel
+                                 || (!flight.arrival.endDistance && !flight.arrival.startDistance)
+                                 || !flight.arrival.endTaxiCost">
     <div class="flight-cell">
       <strong>City to:&nbsp;</strong>
       {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
@@ -40,7 +59,13 @@
     </div>
     <div class="flight-cell">
       <strong>Cost:&nbsp;</strong>
-      {{ flight.summary + ' (' + flight.cost + ' zł + ' + flight.hotel.cost + ' zł + ' + flight.arrival.startDistance + ' km + ' + flight.arrival.endDistance + ' km)' }}
+      {{
+        flight.summary
+        + ' (' + flight.cost + ' zł + '
+        + flight.hotel.cost + ' zł + '
+        + (flight.arrival.startTaxiCost || '0') + ' zł + '
+        + (flight.arrival.endTaxiCost || '0') + ' zł)'
+      }}
     </div>
     <div class="flight-cell">
       <strong>Hotel:&nbsp;</strong>

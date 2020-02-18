@@ -1,6 +1,6 @@
 /* tslint:disable:max-line-length */
 import {Injectable} from '@angular/core';
-import {DetailedFlightAirports, Flight} from './model';
+import {Flight} from './model';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 
@@ -12,7 +12,7 @@ export class DetailedFlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getDetailedFlightInfo(flight: Flight, startHour: string, endHour: string): Observable<DetailedFlightAirports> {
+  public getDetailedFlightInfo(flight: Flight, startHour: string, endHour: string): Observable<any> {
     const params = new HttpParams({
       fromObject: {
         startAirport: flight.arrival.startId,
@@ -23,6 +23,6 @@ export class DetailedFlightService {
         endHour
       }
     });
-    return this.httpClient.get<DetailedFlightAirports>('http://localhost:3000/detailed-flight', { params });
+    return this.httpClient.get<any>('http://localhost:3000/detailed-flight', { params });
   }
 }
