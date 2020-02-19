@@ -33,7 +33,7 @@ export class AppComponent implements OnInit {
   public currentFlights = 0;
   public taxiRequestTime = 0;
   public distinctCities: string[];
-  public readonly requestDebounce = 1000;
+  public readonly requestDebounce = 500;
   private readonly TAXI_REQUEST_DEBOUNCE = 500;
   private readonly WARSAW_TAXI_RATE_PER_KM = 2.4; // TODO: fetch
   private readonly WARSAW_TAXI_STARTING_COST = 8; // TODO: fetch
@@ -47,7 +47,7 @@ export class AppComponent implements OnInit {
   private FLIGHT_COST_MAX = 800;
   private HOTEL_COST_MAX = 1000;
   private readonly startingDay = 5;
-  private readonly endingDay = 7;
+  private readonly endingDay = 0;
   private startingHour = 14;
   private endingHour = 10;
   private body; // TODO: remove
@@ -71,7 +71,8 @@ export class AppComponent implements OnInit {
     'United Arab Emirates'
   ];
   private readonly bannedCities = [
-    'London'
+    'London',
+    'Birmingham'
   ];
   private flights: Flight[] = [];
   private flightDetailsLoading = false;
@@ -97,6 +98,18 @@ export class AppComponent implements OnInit {
   }
 
   public sortFlights() {
+    this.flights.filter(f => f.hotel && (!f.arrival.endDistance || !f.arrival.startDistance))
+      .forEach(errorFlight => {
+        const similarFlight = this.flights.find(f => f.arrival.startDistance
+          && f.hotel
+          && f.hotel.name === errorFlight.hotel.name
+          && f.arrival.city === errorFlight.arrival.city);
+        if (!similarFlight) {
+          return;
+        }
+        errorFlight.arrival.startDistance = similarFlight.arrival.startDistance;
+        errorFlight.arrival.endDistance = similarFlight.arrival.endDistance;
+      });
     this.flights.sort((a, b) => this.sortBySummary(a, b));
   }
 
@@ -354,13 +367,6 @@ export class AppComponent implements OnInit {
         .subscribe(response => {
           this.flights.filter(f => f.hotel && f.arrival.endDistance && f.arrival.startDistance)
             .forEach(f => f.summary += this.setTaxiCostsAndCalculateTaxiSummary(f, response));
-          this.flights.filter(f => f.hotel && (!f.arrival.endDistance || !f.arrival.startDistance))
-            .forEach(errorFlight => {
-              const similarFlight = this.flights.find(f => f.hotel.name === errorFlight.hotel.name
-                && f.arrival.city === errorFlight.arrival.city);
-              errorFlight.arrival.startDistance = similarFlight.arrival.startDistance;
-              errorFlight.arrival.endDistance = similarFlight.arrival.endDistance;
-            });
           this.sortFlights();
           this.flightDetailsLoading = false;
         });
@@ -447,6 +453,7 @@ export class AppComponent implements OnInit {
     // let sunday = this.getNextDayOfWeek(friday, this.endingDay);
     // while (sunday.getDate() < 7 && sunday.getMonth() === 6) {
       const today = new Date();
+      today.setHours(11);
       const weekends: Weekend[] = [];
       let friday = this.getNextDayOfWeek(today, this.startingDay);
       let sunday = this.getNextDayOfWeek(friday, this.endingDay);
