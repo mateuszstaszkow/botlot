@@ -3,7 +3,6 @@ import {from, Observable, of} from 'rxjs';
 import {concatMap, delay} from 'rxjs/operators';
 import {DetailedFlightAirports, Flight, Hotel, Weekend} from './model';
 import {
-  CHOPIN_BODY,
   GOOGLE_FLIGHTS_OPTIONS,
   GOOGLE_FLIGHTS_URL,
   HOLIDAY_BODY,
@@ -34,6 +33,7 @@ export class AppComponent implements OnInit {
   public taxiRequestTime = 0;
   public distinctCities: string[];
   public readonly requestDebounce = 500;
+  private readonly MS_PER_DAY = 1000 * 3600 * 24;
   private readonly TAXI_REQUEST_DEBOUNCE = 500;
   private readonly WARSAW_TAXI_RATE_PER_KM = 2.4; // TODO: fetch
   private readonly WARSAW_TAXI_STARTING_COST = 8; // TODO: fetch
@@ -48,8 +48,10 @@ export class AppComponent implements OnInit {
   private HOTEL_COST_MAX = 1000;
   private readonly startingDay = 5;
   private readonly endingDay = 0;
-  private startingHour = 14;
-  private endingHour = 10;
+  private fridayStartFrom = 17;
+  private fridayStartTo = 23;
+  private sundayStartFrom = 10;
+  private sundayStartTo = 23;
   private body; // TODO: remove
   private trivagoQueryParams = TRIVAGO_QUERY_PARAMS; // TODO: remove
   private readonly bannedCountries = [
@@ -72,7 +74,8 @@ export class AppComponent implements OnInit {
   ];
   private readonly bannedCities = [
     'London',
-    'Birmingham'
+    'Birmingham',
+    'Manchester'
   ];
   private flights: Flight[] = [];
   private flightDetailsLoading = false;
@@ -87,30 +90,27 @@ export class AppComponent implements OnInit {
     weekends[weekends.length - 1].isLast = true;
     this.mapToDelayedObservableArray(weekends)
       .subscribe((weekend: Weekend) => {
-        this.body[3][13][0][6] = weekend.friday;
-        this.body[3][13][1][6] = weekend.sunday;
-        if (this.body[3][13][0][2]) {
-          this.body[3][13][0][2][0] = this.startingHour;
-          this.body[3][13][1][2][0] = this.endingHour;
-        }
+        this.body[3][13][0][6] = weekend.startDay;
+        this.body[3][13][1][6] = weekend.endDay;
+        this.body[3][13][0][2] = [weekend.startHourFrom, weekend.startHourTo];
+        this.body[3][13][1][2] = [weekend.endHourFrom, weekend.endHourTo];
         this.getFlights(weekend);
       });
   }
 
-  public sortFlights() {
-    this.flights.filter(f => f.hotel && (!f.arrival.endDistance || !f.arrival.startDistance))
-      .forEach(errorFlight => {
-        const similarFlight = this.flights.find(f => f.arrival.startDistance
-          && f.hotel
-          && f.hotel.name === errorFlight.hotel.name
-          && f.arrival.city === errorFlight.arrival.city);
-        if (!similarFlight) {
-          return;
-        }
-        errorFlight.arrival.startDistance = similarFlight.arrival.startDistance;
-        errorFlight.arrival.endDistance = similarFlight.arrival.endDistance;
-      });
+  public sortFlightsByTotalAndFixMissingData() {
+    this.fixMissingFlightsData();
     this.flights.sort((a, b) => this.sortBySummary(a, b));
+  }
+
+  public sortFlightsByPricePerDayAndFixMissingData() {
+    this.fixMissingFlightsData();
+    this.flights.sort((a, b) => this.sortBySummaryPerDay(a, b));
+  }
+
+  public sortFlightsByFlightCostAndFixMissingData() {
+    this.fixMissingFlightsData();
+    this.flights.sort((a, b) => this.sortByFlightCost(a, b));
   }
 
   public getProgress(): number {
@@ -125,6 +125,44 @@ export class AppComponent implements OnInit {
       return 0;
     }
     return Math.round(this.taxiRequestTime / this.distinctCities.length / this.TAXI_REQUEST_DEBOUNCE * 100000);
+  }
+
+  public getPricePerDay(flight: Flight): number {
+    const endTimeStamp = new Date(flight.weekend.endDay).getTime();
+    const startTimeStamp = new Date(flight.weekend.startDay).getTime();
+    const numberOfDays = (endTimeStamp - startTimeStamp) / this.MS_PER_DAY;
+    return Math.round(flight.summary / numberOfDays);
+  }
+
+  public getDayName(flight: Flight): string {
+    const dayNo = new Date(flight.weekend.startDay).getDay();
+    if (dayNo === 1) {
+      return 'Monday';
+    } else if (dayNo === 5) {
+      return 'Friday';
+    } else if (dayNo === 6) {
+      return 'Saturday';
+    } else if (dayNo === 7) {
+      return 'Sunday';
+    }
+  }
+
+  private fixMissingFlightsData(): void {
+    this.flights.filter(f => f.hotel && (!f.arrival.endTaxiCost || !f.arrival.startTaxiCost))
+      .forEach(errorFlight => {
+        const similarFlight = this.flights.find(f => !!f.arrival.startTaxiCost
+          && !!f.hotel
+          && f.hotel.name === errorFlight.hotel.name
+          && f.arrival.city === errorFlight.arrival.city);
+        if (!similarFlight) {
+          return;
+        }
+        errorFlight.arrival.startDistance = similarFlight.arrival.startDistance;
+        errorFlight.arrival.endDistance = similarFlight.arrival.endDistance;
+        errorFlight.arrival.startTaxiCost = similarFlight.arrival.startTaxiCost;
+        errorFlight.arrival.endTaxiCost = similarFlight.arrival.endTaxiCost;
+        errorFlight.summary += (errorFlight.arrival.startTaxiCost + errorFlight.arrival.endTaxiCost);
+      });
   }
 
   private mapToDelayedObservableArray<T>(elements: T[]): Observable<T | T[]> {
@@ -177,7 +215,7 @@ export class AppComponent implements OnInit {
     airports[13].splice(directionId, 1);
     if (flightId) {
       airports[13][0][0] = [[[ flightId, 4 ]]]; // TODO: what is 4?
-      airports[13][0][1] = null; // TODO: what is 4?
+      airports[13][0][1] = null;
     }
     body[3] = airports;
     return { ...GOOGLE_FLIGHTS_OPTIONS, body: JSON.stringify(body) };
@@ -262,7 +300,7 @@ export class AppComponent implements OnInit {
     this.getTrivagoCityCode(flight.arrival.city)
       .then(code => {
         queryParams.uiv = code;
-        queryParams.sp = this.mapToTrivagoDate(flight.weekend.friday) + '/' + this.mapToTrivagoDate(flight.weekend.sunday);
+        queryParams.sp = this.mapToTrivagoDate(flight.weekend.startDay) + '/' + this.mapToTrivagoDate(flight.weekend.endDay);
         body.variables.queryParams = <any>JSON.stringify(queryParams);
         options.body = JSON.stringify(body);
         this.fetchHotelAndAssignForRoundFlight(flight, options, body, queryParams);
@@ -308,7 +346,7 @@ export class AppComponent implements OnInit {
     this.currentFlights++;
     this.mapToDelayedObservableArray(this.flights)
       .subscribe((flight: Flight) => this.detailedFlightService
-          .getDetailedFlightInfo(flight, String(this.startingHour), String(this.endingHour))
+          .getDetailedFlightInfo(flight)
           .subscribe(body => {
             const flights = body[2][2][0];
             const airports = body[3][0];
@@ -367,7 +405,7 @@ export class AppComponent implements OnInit {
         .subscribe(response => {
           this.flights.filter(f => f.hotel && f.arrival.endDistance && f.arrival.startDistance)
             .forEach(f => f.summary += this.setTaxiCostsAndCalculateTaxiSummary(f, response));
-          this.sortFlights();
+          this.sortFlightsByTotalAndFixMissingData();
           this.flightDetailsLoading = false;
         });
     }
@@ -415,10 +453,32 @@ export class AppComponent implements OnInit {
     return Math.sqrt(x2 + y2) * this.DECIMAL_DEGREE_TO_KM;
   }
 
-  private sortBySummary(a, b): number {
+  private sortBySummary(a: Flight, b: Flight): number {
     if (a.summary > b.summary) {
       return 1;
     } else if (a.summary < b.summary) {
+      return -1;
+    }
+    return 0;
+  }
+
+  private sortBySummaryPerDay(a: Flight, b: Flight): number {
+    const aPrice = this.getPricePerDay(a);
+    const bPrice = this.getPricePerDay(b);
+    if (aPrice > bPrice) {
+      return 1;
+    } else if (aPrice < bPrice) {
+      return -1;
+    }
+    return 0;
+  }
+
+  private sortByFlightCost(a: Flight, b: Flight): number {
+    const aPrice = a.cost;
+    const bPrice = b.cost;
+    if (aPrice > bPrice) {
+      return 1;
+    } else if (aPrice < bPrice) {
       return -1;
     }
     return 0;
@@ -430,8 +490,8 @@ export class AppComponent implements OnInit {
       const today = new Date();
       // tslint:disable-next-line:no-shadowed-variable
       const weekends: Weekend[] = [];
-      this.startingHour = 0;
-      this.endingHour = 24;
+      this.fridayStartFrom = 0;
+      this.sundayStartFrom = 24;
       this.FLIGHT_COST_MAX = 3000;
       this.HOTEL_COST_MAX = 3000;
       this.trivagoQueryParams = TRIVAGO_HOLIDAY_QUERY_PARAMS;
@@ -439,8 +499,12 @@ export class AppComponent implements OnInit {
       let lastDay = this.getNextDayOfWeek(this.getNextDayOfWeek(firstDay, 1), 7);
       while (lastDay.getFullYear() === today.getFullYear()) {
         weekends.push({
-          friday: this.mapToISOStringDate(firstDay),
-          sunday: this.mapToISOStringDate(lastDay)
+          startDay: this.mapToISOStringDate(firstDay),
+          endDay: this.mapToISOStringDate(lastDay),
+          startHourFrom: this.fridayStartFrom,
+          startHourTo: this.fridayStartTo,
+          endHourFrom: this.sundayStartFrom,
+          endHourTo: this.sundayStartTo
         });
         firstDay = this.getNextDayOfWeek(lastDay, 6);
         lastDay = this.getNextDayOfWeek(this.getNextDayOfWeek(firstDay, 1), 7);
@@ -459,13 +523,59 @@ export class AppComponent implements OnInit {
       let sunday = this.getNextDayOfWeek(friday, this.endingDay);
       while (sunday.getFullYear() === today.getFullYear()) {
       weekends.push({
-        friday: this.mapToISOStringDate(friday),
-        sunday: this.mapToISOStringDate(sunday)
+        startDay: this.mapToISOStringDate(friday),
+        endDay: this.mapToISOStringDate(sunday),
+        startHourFrom: this.fridayStartFrom,
+        startHourTo: this.fridayStartTo,
+        endHourFrom: this.sundayStartFrom,
+        endHourTo: this.sundayStartTo
       });
       friday = this.getNextDayOfWeek(sunday, this.startingDay);
       sunday = this.getNextDayOfWeek(friday, this.endingDay);
     }
-    return weekends;
+    // return weekends;
+    return [
+      {startDay: '2020-04-03', endDay: '2020-04-05', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-04-04', endDay: '2020-04-05', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-04-03', endDay: '2020-04-06', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-04-04', endDay: '2020-04-06', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-05-08', endDay: '2020-05-10', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-05-09', endDay: '2020-05-10', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-05-08', endDay: '2020-05-11', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-05-09', endDay: '2020-05-11', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-06-26', endDay: '2020-06-28', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-06-27', endDay: '2020-06-28', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-06-26', endDay: '2020-06-29', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-06-27', endDay: '2020-06-29', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-03', endDay: '2020-07-05', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-07-04', endDay: '2020-07-05', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-07-03', endDay: '2020-07-06', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-04', endDay: '2020-07-06', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-10', endDay: '2020-07-12', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-07-11', endDay: '2020-07-12', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-07-10', endDay: '2020-07-13', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-11', endDay: '2020-07-13', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-17', endDay: '2020-07-19', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      {startDay: '2020-07-18', endDay: '2020-07-19', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      {startDay: '2020-07-17', endDay: '2020-07-20', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      {startDay: '2020-07-18', endDay: '2020-07-20', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-04', endDay: '2020-09-06', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      // {startDay: '2020-09-05', endDay: '2020-09-06', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      // {startDay: '2020-09-04', endDay: '2020-09-07', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-05', endDay: '2020-09-07', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-11', endDay: '2020-09-13', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      // {startDay: '2020-09-12', endDay: '2020-09-13', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      // {startDay: '2020-09-11', endDay: '2020-09-14', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-12', endDay: '2020-09-14', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-18', endDay: '2020-09-20', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      // {startDay: '2020-09-19', endDay: '2020-09-20', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      // {startDay: '2020-09-18', endDay: '2020-09-21', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-19', endDay: '2020-09-21', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-25', endDay: '2020-09-27', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
+      // {startDay: '2020-09-26', endDay: '2020-09-27', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
+      // {startDay: '2020-09-25', endDay: '2020-09-28', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
+      // {startDay: '2020-09-26', endDay: '2020-09-28', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
+    ];
   }
 
   private mapToTrivagoDate(date: string): string {

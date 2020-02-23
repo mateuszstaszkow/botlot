@@ -1,8 +1,12 @@
 // TODO: move to model directory and split between files, add responses etc.
 
 export interface Weekend {
-  friday: string;
-  sunday: string;
+  startDay: string;
+  endDay: string;
+  startHourFrom: number;
+  startHourTo: number;
+  endHourFrom: number;
+  endHourTo: number;
   isLast?: boolean;
 }
 

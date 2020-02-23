@@ -8,8 +8,18 @@
 <div class="full-width">
   <button mat-raised-button
           class="sort-button"
-          (click)="sortFlights()">
-    Sort
+          (click)="sortFlightsByTotalAndFixMissingData()">
+    Sort by Total
+  </button>
+  <button mat-raised-button
+          class="sort-button"
+          (click)="sortFlightsByPricePerDayAndFixMissingData()">
+    Sort by Price Per Day
+  </button>
+  <button mat-raised-button
+          class="sort-button"
+          (click)="sortFlightsByFlightCostAndFixMissingData()">
+    Sort by Flight Cost
   </button>
   <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">
     <ng-container *ngIf="progress < 100">
@@ -18,7 +28,7 @@
                         [value]="progress">
       </mat-progress-bar>
       <span class="progress-info">
-        {{ progress + ' %' + '(time left: ' + (flights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
+        {{ progress + ' %' + ' (time left: ' + (flights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
       </span>
     </ng-container>
     <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">
@@ -30,7 +40,11 @@
                             [value]="taxiProgress">
           </mat-progress-bar>
           <span class="progress-info">
-            {{ taxiProgress + ' %' + '(time left: ' + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)' }}
+            <!--TODO: fix time left-->
+            {{
+                taxiProgress + ' %' + ' (time left: '
+                + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'
+            }}
           </span>
         </ng-container>
         <ng-container *ngIf="taxiProgress >= 100">
@@ -49,16 +63,21 @@
       <strong>City to:&nbsp;</strong>
       {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
     </div>
-    <div class="flight-cell">
+    <div *ngIf="flight.arrival.city !== flight.depart.city"
+         class="flight-cell">
       <strong>City from:&nbsp;</strong>
       {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
     </div>
     <div class="flight-cell">
       <strong>Date:&nbsp;</strong>
-      {{ flight.weekend.friday + ' / ' + flight.weekend.sunday }}
+      {{ flight.weekend.startDay + ' / ' + flight.weekend.endDay + ' (from ' + getDayName(flight) + ')' }}
     </div>
     <div class="flight-cell">
-      <strong>Cost:&nbsp;</strong>
+      <strong>Cost per day:&nbsp;</strong>
+      {{ getPricePerDay(flight) }}
+    </div>
+    <div class="flight-cell">
+      <strong>Total Cost:&nbsp;</strong>
       {{
         flight.summary
         + ' (' + flight.cost + ' zł + '

@@ -45,7 +45,7 @@ export const TRIVAGO_HOLIDAY_QUERY_PARAMS = {
   'uiv': '85523/200:1,1322/105:1,9/132:1,1527/106:1',
   'tid': 'pBr9lypiYIJpKHvilusVtRmUy_',
   'sp': '20201107/20201115',
-  'rms': '1',
+  'rms': '2',
   'p': 'pl',
   'l': 'pl',
   'ccy': 'PLN',

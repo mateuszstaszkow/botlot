@@ -12,15 +12,17 @@ export class DetailedFlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getDetailedFlightInfo(flight: Flight, startHour: string, endHour: string): Observable<any> {
+  public getDetailedFlightInfo(flight: Flight): Observable<any> {
     const params = new HttpParams({
       fromObject: {
         startAirport: flight.arrival.startId,
         endAirport: flight.arrival.endId,
-        startDate: flight.weekend.friday,
-        endDate: flight.weekend.sunday,
-        startHour,
-        endHour
+        startDate: flight.weekend.startDay,
+        endDate: flight.weekend.endDay,
+        startHourFrom: String(flight.weekend.startHourFrom),
+        startHourTo: String(flight.weekend.startHourTo),
+        endHourFrom: String(flight.weekend.endHourFrom),
+        endHourTo: String(flight.weekend.endHourTo)
       }
     });
     return this.httpClient.get<any>('http://localhost:3000/detailed-flight', { params });
