@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
-import {from, Observable, of} from 'rxjs';
-import {concatMap, delay} from 'rxjs/operators';
+import {from, Observable, of, Subject} from 'rxjs';
+import {concatMap, debounceTime, delay} from 'rxjs/operators';
 import {DetailedFlightAirports, Flight, Hotel, Weekend} from './model';
 import {
   GOOGLE_FLIGHTS_OPTIONS,
@@ -57,28 +57,33 @@ export class AppComponent implements OnInit {
   private readonly bannedCountries = [
     'Poland',
     // 'United Kingdom',
-    'Ukraine',
-    'Germany',
-    'Portugal',
-    'Belgium',
-    'Hungary',
-    'Austria',
-    'Greece',
-    'Latvia',
-    'Slovakia',
-    'Romania',
-    'Moldova',
-    'Morocco',
-    'France',
-    'United Arab Emirates'
+    // 'Ukraine',
+    // 'Germany',
+    // 'Portugal',
+    // 'Belgium',
+    // 'Hungary',
+    // 'Austria',
+    // 'Greece',
+    // 'Latvia',
+    // 'Slovakia',
+    // // 'Romania',
+    // 'Moldova',
+    // 'Morocco',
+    // 'France',
+    // 'United Arab Emirates'
   ];
   private readonly bannedCities = [
-    'London',
-    'Birmingham',
-    'Manchester'
+    // 'London',
+    // 'Birmingham',
+    // 'Manchester',
+    // 'Kaunas',
+    // 'Palanga'
   ];
+  public filteredFlights: Flight[];
   private flights: Flight[] = [];
   private flightDetailsLoading = false;
+  private peopleCount = 2;
+  private searchSubject: Subject<string> = new Subject();
 
   constructor(private readonly detailedFlightService: DetailedFlightService,
               private readonly taxiFareService: TaxiFareService
@@ -96,21 +101,27 @@ export class AppComponent implements OnInit {
         this.body[3][13][1][2] = [weekend.endHourFrom, weekend.endHourTo];
         this.getFlights(weekend);
       });
+    this.searchSubject.pipe(
+      debounceTime(500)
+    ).subscribe(term => this.search(term));
   }
 
   public sortFlightsByTotalAndFixMissingData() {
     this.fixMissingFlightsData();
     this.flights.sort((a, b) => this.sortBySummary(a, b));
+    this.filteredFlights = this.flights.slice(0);
   }
 
   public sortFlightsByPricePerDayAndFixMissingData() {
     this.fixMissingFlightsData();
     this.flights.sort((a, b) => this.sortBySummaryPerDay(a, b));
+    this.filteredFlights = this.flights.slice(0);
   }
 
   public sortFlightsByFlightCostAndFixMissingData() {
     this.fixMissingFlightsData();
     this.flights.sort((a, b) => this.sortByFlightCost(a, b));
+    this.filteredFlights = this.flights.slice(0);
   }
 
   public getProgress(): number {
@@ -145,6 +156,23 @@ export class AppComponent implements OnInit {
     } else if (dayNo === 7) {
       return 'Sunday';
     }
+  }
+
+  public onSearchKeyUp(event: Event): void {
+    const searchTerm: string = (<any>event.target).value;
+    this.searchSubject.next(searchTerm);
+  }
+
+  private search(term: string): void {
+    this.filteredFlights = this.flights.filter(flight => [
+        flight.hotel.name,
+        flight.depart.city,
+        flight.depart.country,
+        flight.arrival.city,
+        flight.arrival.country
+      ].map(name => name.includes(term))
+      .reduce((a, b) => a || b)
+    );
   }
 
   private fixMissingFlightsData(): void {
@@ -276,6 +304,7 @@ export class AppComponent implements OnInit {
     const properFlights = this.buildFlights(weekend, response)
       .filter((flight: Flight) => !this.isAirportBanned(flight));
     this.flights = this.flights.concat(properFlights);
+    this.filteredFlights = this.flights;
     if (weekend.isLast) {
       this.sendRoundFlights();
     }
@@ -488,10 +517,11 @@ export class AppComponent implements OnInit {
     if (this.body === HOLIDAY_BODY) {
       // tslint:disable-next-line:no-shadowed-variable
       const today = new Date();
+      today.setHours(11);
       // tslint:disable-next-line:no-shadowed-variable
       const weekends: Weekend[] = [];
-      this.fridayStartFrom = 0;
-      this.sundayStartFrom = 24;
+      this.fridayStartFrom = 1;
+      this.sundayStartFrom = 1;
       this.FLIGHT_COST_MAX = 3000;
       this.HOTEL_COST_MAX = 3000;
       this.trivagoQueryParams = TRIVAGO_HOLIDAY_QUERY_PARAMS;
@@ -535,18 +565,6 @@ export class AppComponent implements OnInit {
     }
     // return weekends;
     return [
-      {startDay: '2020-04-03', endDay: '2020-04-05', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
-      {startDay: '2020-04-04', endDay: '2020-04-05', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
-      {startDay: '2020-04-03', endDay: '2020-04-06', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
-      {startDay: '2020-04-04', endDay: '2020-04-06', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
-      {startDay: '2020-05-08', endDay: '2020-05-10', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
-      {startDay: '2020-05-09', endDay: '2020-05-10', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
-      {startDay: '2020-05-08', endDay: '2020-05-11', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
-      {startDay: '2020-05-09', endDay: '2020-05-11', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
-      {startDay: '2020-06-26', endDay: '2020-06-28', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
-      {startDay: '2020-06-27', endDay: '2020-06-28', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
-      {startDay: '2020-06-26', endDay: '2020-06-29', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },
-      {startDay: '2020-06-27', endDay: '2020-06-29', startHourFrom: 7, startHourTo: 13, endHourFrom: 1, endHourTo: 8 },
       {startDay: '2020-07-03', endDay: '2020-07-05', startHourFrom: 17, startHourTo: 23, endHourFrom: 10, endHourTo: 23 },
       {startDay: '2020-07-04', endDay: '2020-07-05', startHourFrom: 7, startHourTo: 13, endHourFrom: 20, endHourTo: 23 },
       {startDay: '2020-07-03', endDay: '2020-07-06', startHourFrom: 17, startHourTo: 23, endHourFrom: 1, endHourTo: 8 },

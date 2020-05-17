@@ -45,7 +45,7 @@ export const TRIVAGO_HOLIDAY_QUERY_PARAMS = {
   'uiv': '85523/200:1,1322/105:1,9/132:1,1527/106:1',
   'tid': 'pBr9lypiYIJpKHvilusVtRmUy_',
   'sp': '20201107/20201115',
-  'rms': '2',
+  'rms': '3',
   'p': 'pl',
   'l': 'pl',
   'ccy': 'PLN',
@@ -64,51 +64,52 @@ export const TRIVAGO_QUERY_PARAMS = {
   'uiv': '25029/200:1,1322/105:1,1320/105:1,1318/105:1,2555/106:1',
   'tid': 'CZQDDZApuclWMGvz7q1FVTeiW_',
   'sp': '20200320/20200322',
-  'rms': '2',
+  'rms': '2', // tunable
   'p': 'pl',
   'l': 'pl',
   'ccy': 'PLN',
   'accoff': 0,
   'acclim': 25
 };
+
 export const TRIVAGO_BODY = {
   'operationName': 'regionSearch',
   'variables': {
     'searchType': 'cep.json',
     'queryParams': '',
     'pollData': null,
-    'isAirBnbSupported': true,
+    'allowAdvertiserInfo2': false,
     'openItemsInNewTab': false,
-    'showHomeAwayPremierProperties': true,
-    'showGranularAAccType': false,
     'showBusinessHotels': true,
     'showBudgetHotels': false,
     'isMobileList': false,
     'skipAlternativeDeals': false,
-    'skipMinPriceExtraInfo': true,
+    'skipMinPriceExtraInfo': false,
     'shouldSkipRedirect': true,
     'aaScoreRating': false,
     'locale': 'PL',
-    'cidns': '25029/200',
+    'cidns': '13437/200',
     'getRareFind': false,
     'useVar2DataSource': false
   },
-  'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': '7fb45afe037b5f9ecdf9003fbab88733c19e51f0250684b195843b33f95a9039'}}
+  'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': 'c5958a0f154bba9efb27eec29a8809492be0d4ee49704aabec1cca8f96889eab'}} // deprecatedable
 };
+
 export const TRIVAGO_OPTIONS: RequestInit = {
   'credentials': 'omit',
   'headers': {
     'accept': '*/*',
     'accept-language': 'pl',
     'apollographql-client-name': 'hs-web',
-    'apollographql-client-version': 'v92_01_3_bv_41b52143c47',
+    'apollographql-client-version': 'v92_03_2_bi_42e59124e18',
     'content-type': 'application/json',
+    'sec-fetch-dest': 'empty',
     'sec-fetch-mode': 'cors',
     'sec-fetch-site': 'cross-site',
-    'x-request-id': '0A0102A688070A0102D200505E24CA833384277818171',
-    'x-trv-cst': '1448029553-1,1459869632-1,1472823160-1,1472826866-1,27291-1,32046-1,39578-1,40402-1,42164-1,42280-1,42673-1,38217-1,39875-1,45349-1,45749-1,46136-1,46138-1,46164-1,46411-1,46587-1,46876-1,47158-3,46535-1,47123-1,47357-1,45124-1,45039-1,47748-1,47225-1,47405-1,48329-1,48491-1,47828-1,48405-1,47908-1,48700-1,48542-1,48506-1,48531-1,48681-1,46734-1,43316-1,48673-1,49290-1,48921-1,49476-1,48467-1,49346-2,49291-1,49665-1,49419-1,48401-1,48371-1,50076-1,49333-1,49490-1,48404-1,49915-1'
+    'x-request-id': '0A0102A5DD6E0A0102D200505E5F3A84545B92721487',
+    'x-trv-cst': '27291-1,32046-1,33651-1,39578-1,40402-1,42164-1,42280-1,42673-1,43316-1,45124-1,45749-1,46136-1,46138-1,46164-1,46411-1,46535-1,46876-1,47123-1,47158-3,47225-1,47405-1,47748-1,47828-1,47908-1,48329-1,48401-1,48405-1,48438-1,48467-1,48491-1,48506-1,48531-1,48542-1,48673-1,48681-1,48700-1,48709-1,48921-1,49236-1,49291-1,49333-1,49415-1,49419-1,49476-1,49490-1,49492-1,49643-1,49722-1,49733-1,49916-1,49974-1,50008-1,50025-1,50153-1,50165-1,50182-1,50332-1,50680-1,50862-3,1443703219-1,1448029553-1,1472823160-1'
   },
-  'referrer': 'https://www.trivago.pl/?aDateRange%5Barr%5D=2020-03-20&aDateRange%5Bdep%5D=2020-03-22&aPriceRange%5Bfrom%5D=0&aPriceRange%5Bto%5D=0&iRoomType=1&aRooms%5B0%5D%5Badults%5D=1&cpt2=25029%2F200%2C1322%2F105%2C1320%2F105%2C1318%2F105%2C2555%2F106%2C2007%2F106%2C1527%2F106%2C1324%2F106&iViewType=0&bIsSeoPage=0&sortingId=2&slideoutsPageItemId=&iGeoDistanceLimit=20000&address=&addressGeoCode=&offset=0&ra=',
+  'referrer': 'https://www.trivago.pl/?aDateRange%5Barr%5D=2020-03-13&aDateRange%5Bdep%5D=2020-03-15&aPriceRange%5Bfrom%5D=0&aPriceRange%5Bto%5D=0&iRoomType=1&aRooms%5B0%5D%5Badults%5D=1&cpt2=13437%2F200&hasList=1&hasMap=0&bIsSeoPage=0&sortingId=1&slideoutsPageItemId=&iGeoDistanceLimit=20000&address=&addressGeoCode=&offset=0&ra=',
   'referrerPolicy': 'no-referrer-when-downgrade',
   'body': '',
   'method': 'POST',

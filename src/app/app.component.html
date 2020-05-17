@@ -1,96 +1,106 @@
-<!--The content below is only a placeholder and can be replaced.-->
 <div style="text-align:center">
   <h1>
     Welcome to {{ title }}!
   </h1>
   <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
 </div>
-<div class="full-width">
-  <button mat-raised-button
-          class="sort-button"
-          (click)="sortFlightsByTotalAndFixMissingData()">
-    Sort by Total
-  </button>
-  <button mat-raised-button
-          class="sort-button"
-          (click)="sortFlightsByPricePerDayAndFixMissingData()">
-    Sort by Price Per Day
-  </button>
-  <button mat-raised-button
-          class="sort-button"
-          (click)="sortFlightsByFlightCostAndFixMissingData()">
-    Sort by Flight Cost
-  </button>
-  <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">
-    <ng-container *ngIf="progress < 100">
-      <mat-progress-bar class="progress-bar"
-                        mode="determinate"
-                        [value]="progress">
-      </mat-progress-bar>
-      <span class="progress-info">
-        {{ progress + ' %' + ' (time left: ' + (flights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
+<div class="container">
+  <div class="full-width">
+    <form class="search-field">
+      <mat-form-field class="full-width">
+        <input matInput
+               placeholder="Search"
+               (keyup)="onSearchKeyUp($event)">
+      </mat-form-field>
+    </form>
+  </div>
+  <div class="full-width">
+    <button mat-raised-button
+            class="sort-button"
+            (click)="sortFlightsByTotalAndFixMissingData()">
+      Sort by Total
+    </button>
+    <button mat-raised-button
+            class="sort-button"
+            (click)="sortFlightsByPricePerDayAndFixMissingData()">
+      Sort by Price Per Day
+    </button>
+    <button mat-raised-button
+            class="sort-button"
+            (click)="sortFlightsByFlightCostAndFixMissingData()">
+      Sort by Flight Cost
+    </button>
+    <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">
+      <ng-container *ngIf="progress < 100">
+        <mat-progress-bar class="progress-bar"
+                          mode="determinate"
+                          [value]="progress">
+        </mat-progress-bar>
+        <span class="progress-info">
+        {{ progress + ' %' + ' (time left: ' + (filteredFlights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
       </span>
-    </ng-container>
-    <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">
-      <ng-container *ngIf="getTaxiProgress() as taxiProgress">
-        <ng-container *ngIf="taxiProgress < 100">
-          <mat-progress-bar class="progress-bar"
-                            mode="determinate"
-                            color="warn"
-                            [value]="taxiProgress">
-          </mat-progress-bar>
-          <span class="progress-info">
+      </ng-container>
+      <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">
+        <ng-container *ngIf="getTaxiProgress() as taxiProgress">
+          <ng-container *ngIf="taxiProgress < 100">
+            <mat-progress-bar class="progress-bar"
+                              mode="determinate"
+                              color="warn"
+                              [value]="taxiProgress">
+            </mat-progress-bar>
+            <span class="progress-info">
             <!--TODO: fix time left-->
-            {{
-                taxiProgress + ' %' + ' (time left: '
-                + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'
-            }}
+              {{
+              taxiProgress + ' %' + ' (time left: '
+              + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'
+              }}
           </span>
-        </ng-container>
-        <ng-container *ngIf="taxiProgress >= 100">
-          {{ flights.length + ' results:' }}
+          </ng-container>
+          <ng-container *ngIf="taxiProgress >= 100">
+            {{ filteredFlights.length + ' results:' }}
+          </ng-container>
         </ng-container>
       </ng-container>
     </ng-container>
-  </ng-container>
-</div>
-<div *ngFor="let flight of flights">
-  <div *ngIf="flight.hotel && flight.weekend && flight.arrival && flight.depart"
-       [class.flight-row-error]="!flight.hotel
+  </div>
+  <div *ngFor="let flight of filteredFlights">
+    <div *ngIf="flight.weekend && flight.arrival && flight.depart"
+         [class.flight-row-error]="!flight.hotel
                                  || (!flight.arrival.endDistance && !flight.arrival.startDistance)
                                  || !flight.arrival.endTaxiCost">
-    <div class="flight-cell">
-      <strong>City to:&nbsp;</strong>
-      {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
-    </div>
-    <div *ngIf="flight.arrival.city !== flight.depart.city"
-         class="flight-cell">
-      <strong>City from:&nbsp;</strong>
-      {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
-    </div>
-    <div class="flight-cell">
-      <strong>Date:&nbsp;</strong>
-      {{ flight.weekend.startDay + ' / ' + flight.weekend.endDay + ' (from ' + getDayName(flight) + ')' }}
-    </div>
-    <div class="flight-cell">
-      <strong>Cost per day:&nbsp;</strong>
-      {{ getPricePerDay(flight) }}
-    </div>
-    <div class="flight-cell">
-      <strong>Total Cost:&nbsp;</strong>
-      {{
+      <div class="flight-cell">
+        <strong>City to:&nbsp;</strong>
+        {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
+      </div>
+      <div *ngIf="flight.arrival.city !== flight.depart.city"
+           class="flight-cell">
+        <strong>City from:&nbsp;</strong>
+        {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
+      </div>
+      <div class="flight-cell">
+        <strong>Date:&nbsp;</strong>
+        {{ flight.weekend.startDay + ' / ' + flight.weekend.endDay + ' (from ' + getDayName(flight) + ')' }}
+      </div>
+      <div class="flight-cell">
+        <strong>Cost per day:&nbsp;</strong>
+        {{ getPricePerDay(flight) }}
+      </div>
+      <div class="flight-cell">
+        <strong>Total Cost:&nbsp;</strong>
+        {{
         flight.summary
         + ' (' + flight.cost + ' zł + '
-        + flight.hotel.cost + ' zł + '
+        + (flight.hotel ? flight.hotel.cost : 0) + ' zł + '
         + (flight.arrival.startTaxiCost || '0') + ' zł + '
         + (flight.arrival.endTaxiCost || '0') + ' zł)'
-      }}
+        }}
+      </div>
+      <div class="flight-cell">
+        <strong>Hotel:&nbsp;</strong>
+        {{ flight.hotel ? flight.hotel.name : 'Unknown' }}
+      </div>
+      <hr/>
     </div>
-    <div class="flight-cell">
-      <strong>Hotel:&nbsp;</strong>
-      {{ flight.hotel.name }}
-    </div>
-    <hr/>
   </div>
 </div>
 
