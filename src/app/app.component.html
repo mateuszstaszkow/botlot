@@ -30,40 +30,40 @@
             (click)="sortFlightsByFlightCostAndFixMissingData()">
       Sort by Flight Cost
     </button>
-    <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">
-      <ng-container *ngIf="progress < 100">
-        <mat-progress-bar class="progress-bar"
-                          mode="determinate"
-                          [value]="progress">
-        </mat-progress-bar>
-        <span class="progress-info">
-        {{ progress + ' %' + ' (time left: ' + (filteredFlights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}
-      </span>
-      </ng-container>
-      <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">
-        <ng-container *ngIf="getTaxiProgress() as taxiProgress">
-          <ng-container *ngIf="taxiProgress < 100">
-            <mat-progress-bar class="progress-bar"
-                              mode="determinate"
-                              color="warn"
-                              [value]="taxiProgress">
-            </mat-progress-bar>
-            <span class="progress-info">
-            <!--TODO: fix time left-->
-              {{
-              taxiProgress + ' %' + ' (time left: '
-              + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'
-              }}
-          </span>
-          </ng-container>
-          <ng-container *ngIf="taxiProgress >= 100">
-            {{ filteredFlights.length + ' results:' }}
-          </ng-container>
-        </ng-container>
-      </ng-container>
-    </ng-container>
+<!--    <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">-->
+<!--      <ng-container *ngIf="progress < 100">-->
+<!--        <mat-progress-bar class="progress-bar"-->
+<!--                          mode="determinate"-->
+<!--                          [value]="progress">-->
+<!--        </mat-progress-bar>-->
+<!--        <span class="progress-info">-->
+<!--        {{ progress + ' %' + ' (time left: ' + (filteredFlights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}-->
+<!--      </span>-->
+<!--      </ng-container>-->
+<!--      <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">-->
+<!--        <ng-container *ngIf="getTaxiProgress() as taxiProgress">-->
+<!--          <ng-container *ngIf="taxiProgress < 100">-->
+<!--            <mat-progress-bar class="progress-bar"-->
+<!--                              mode="determinate"-->
+<!--                              color="warn"-->
+<!--                              [value]="taxiProgress">-->
+<!--            </mat-progress-bar>-->
+<!--            <span class="progress-info">-->
+<!--            &lt;!&ndash;TODO: fix time left&ndash;&gt;-->
+<!--              {{-->
+<!--              taxiProgress + ' %' + ' (time left: '-->
+<!--              + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'-->
+<!--              }}-->
+<!--          </span>-->
+<!--          </ng-container>-->
+<!--          <ng-container *ngIf="taxiProgress >= 100">-->
+<!--            {{ filteredFlights.length + ' results:' }}-->
+<!--          </ng-container>-->
+<!--        </ng-container>-->
+<!--      </ng-container>-->
+<!--    </ng-container>-->
   </div>
-  <div *ngFor="let flight of filteredFlights">
+  <div *ngFor="let flight of flights$ | async">
     <div *ngIf="flight.weekend && flight.arrival && flight.depart"
          [class.flight-row-error]="!flight.hotel
                                  || (!flight.arrival.endDistance && !flight.arrival.startDistance)
