@@ -1,3 +1,7 @@
+.container {
+  margin: 1rem;
+}
+
 .flight-cell {
   display: inline-block;
   margin-right: 2rem;
@@ -22,6 +26,10 @@
     margin: 1rem;
     display: inline-block;
   }
+}
+
+.search-field {
+  width: 30%;
 }
 
 .sort-button {
