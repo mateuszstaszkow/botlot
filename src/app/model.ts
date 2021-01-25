@@ -20,6 +20,7 @@ export interface Flight {
   summary?: number;
   hotel?: Hotel;
   invocations?: number; // TODO: remove
+  detailedFlight?: DetailedFlightAirports;
 }
 
 export interface Airport {

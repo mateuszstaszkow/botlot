@@ -63,11 +63,11 @@
 <!--      </ng-container>-->
 <!--    </ng-container>-->
   </div>
-  <div *ngFor="let flight of flights$ | async">
+  <div *ngFor="let flight of displayedFlights">
     <div *ngIf="flight.weekend && flight.arrival && flight.depart"
          [class.flight-row-error]="!flight.hotel
-                                 || (!flight.arrival.endDistance && !flight.arrival.startDistance)
-                                 || !flight.arrival.endTaxiCost">
+                               || (!flight.arrival.endDistance && !flight.arrival.startDistance)
+                               || !flight.arrival.endTaxiCost">
       <div class="flight-cell">
         <strong>City to:&nbsp;</strong>
         {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}

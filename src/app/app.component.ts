@@ -1,7 +1,10 @@
 import {Component, OnInit} from '@angular/core';
-import {Observable, Subject} from 'rxjs';
+import {from, Observable, of} from 'rxjs';
 import {Flight} from './model';
 import {FlightService} from './flight.service';
+import {concatMap, delay, map} from 'rxjs/operators';
+import {HotelService} from './hotel.service';
+import {ShuttleService} from './shuttle.service';
 
 @Component({
   selector: 'app-root',
@@ -13,40 +16,46 @@ export class AppComponent implements OnInit {
   public currentFlights = 0;
   public distinctCities: string[];
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
-  public filteredFlights: Flight[];
-  public flights: Flight[] = [];
-  public flights$: Observable<Flight[]>;
-  private searchSubject: Subject<string> = new Subject();
+  public displayedFlights: Flight[] = [];
+  public cachedFlights: Flight[] = [];
+  public readonly requestDebounce = 1000;
 
-  constructor(private readonly flightService: FlightService) {}
+  constructor(private readonly flightService: FlightService,
+              private readonly hotelService: HotelService,
+              private readonly shuttleService: ShuttleService) {}
 
+  // TODO: add delay
   ngOnInit(): void {
-    this.flights$ = this.flightService.getFlights();
+    this.flightService.getFlights().pipe(
+      concatMap(flights => this.mapToDelayedObservableArray<Flight>(flights)),
+      concatMap(flight => this.hotelService.updateFlightWithHotelDetails(flight)),
+      concatMap((f: Flight) => this.flightService.updateFlightWithAirportCoordinates(f).pipe(
+        map(detailedFlight => ({ ...f, detailedFlight }))
+      )),
+      concatMap(f => f.detailedFlight ? this.shuttleService.updateFlightWithShuttle(f) : of(f))
+    ).subscribe(f => this.displayedFlights.push(f));
   }
 
   public sortFlightsByTotalAndFixMissingData() {
     this.fixMissingFlightsData();
-    this.flights.sort((a, b) => this.sortBySummary(a, b));
-    this.filteredFlights = this.flights.slice(0);
+    this.displayedFlights.sort((a, b) => this.sortBySummary(a, b));
   }
 
   public sortFlightsByPricePerDayAndFixMissingData() {
     this.fixMissingFlightsData();
-    this.flights.sort((a, b) => this.sortBySummaryPerDay(a, b));
-    this.filteredFlights = this.flights.slice(0);
+    this.displayedFlights.sort((a, b) => this.sortBySummaryPerDay(a, b));
   }
 
   public sortFlightsByFlightCostAndFixMissingData() {
     this.fixMissingFlightsData();
-    this.flights.sort((a, b) => this.sortByFlightCost(a, b));
-    this.filteredFlights = this.flights.slice(0);
+    this.displayedFlights.sort((a, b) => this.sortByFlightCost(a, b));
   }
 
   public getProgress(): number {
-    if (!this.flights.length) {
+    if (!this.displayedFlights.length) {
       return 0;
     }
-    return Math.round(this.currentFlights / this.flights.length * 100);
+    return Math.round(this.currentFlights / this.displayedFlights.length * 100);
   }
 
   public getPricePerDay(flight: Flight): number {
@@ -71,25 +80,32 @@ export class AppComponent implements OnInit {
 
   public onSearchKeyUp(event: Event): void {
     const searchTerm: string = (<any>event.target).value;
-    this.searchSubject.next(searchTerm);
+    this.search(searchTerm);
   }
 
   private search(term: string): void {
-    this.filteredFlights = this.flights.filter(flight => [
+    if (!this.cachedFlights.length) {
+      this.cachedFlights = this.displayedFlights.slice(0);
+    }
+    if (!term) {
+      this.displayedFlights = this.cachedFlights.slice(0);
+      return;
+    }
+    this.displayedFlights = this.cachedFlights.filter(flight => [
         flight.hotel.name,
         flight.depart.city,
         flight.depart.country,
         flight.arrival.city,
         flight.arrival.country
-      ].map(name => name.includes(term))
+      ].map(name => name.toLowerCase().includes(term.toLowerCase()))
       .reduce((a, b) => a || b)
     );
   }
 
   private fixMissingFlightsData(): void {
-    this.flights.filter(f => f.hotel && (!f.arrival.endTaxiCost || !f.arrival.startTaxiCost))
+    this.displayedFlights.filter(f => f.hotel && (!f.arrival.endTaxiCost || !f.arrival.startTaxiCost))
       .forEach(errorFlight => {
-        const similarFlight = this.flights.find(f => !!f.arrival.startTaxiCost
+        const similarFlight = this.displayedFlights.find(f => !!f.arrival.startTaxiCost
           && !!f.hotel
           && f.hotel.name === errorFlight.hotel.name
           && f.arrival.city === errorFlight.arrival.city);
@@ -133,5 +149,16 @@ export class AppComponent implements OnInit {
       return -1;
     }
     return 0;
+  }
+
+  private mapToDelayedObservableArray<T>(elements: T[]): Observable<T> {
+    return from(elements).pipe(
+      concatMap(element => {
+        const noisyDebounce = this.requestDebounce + (100 - Math.floor(Math.random() * 200));
+        return of(element).pipe(
+          delay(noisyDebounce)
+        );
+      })
+    );
   }
 }
