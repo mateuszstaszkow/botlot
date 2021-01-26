@@ -12,13 +12,14 @@ import {ShuttleService} from './shuttle.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  title = 'botlot';
-  public currentFlights = 0;
+  public readonly REQUEST_DEBOUNCE_MS = 1000;
   public distinctCities: string[];
-  private readonly MS_PER_DAY = 1000 * 3600 * 24;
   public displayedFlights: Flight[] = [];
   public cachedFlights: Flight[] = [];
-  public readonly requestDebounce = 1000;
+  public progress = 0;
+  public flightsCount = 1;
+  public isLogoInitial = true;
+  private readonly MS_PER_DAY = 1000 * 3600 * 24;
 
   constructor(private readonly flightService: FlightService,
               private readonly hotelService: HotelService,
@@ -27,13 +28,25 @@ export class AppComponent implements OnInit {
   // TODO: add delay
   ngOnInit(): void {
     this.flightService.getFlights().pipe(
-      concatMap(flights => this.mapToDelayedObservableArray<Flight>(flights)),
+      concatMap(flights => {
+        this.flightsCount = flights.length;
+        return this.mapToDelayedObservableArray<Flight>(flights);
+      }),
       concatMap(flight => this.hotelService.updateFlightWithHotelDetails(flight)),
       concatMap((f: Flight) => this.flightService.updateFlightWithAirportCoordinates(f).pipe(
         map(detailedFlight => ({ ...f, detailedFlight }))
       )),
       concatMap(f => f.detailedFlight ? this.shuttleService.updateFlightWithShuttle(f) : of(f))
-    ).subscribe(f => this.displayedFlights.push(f));
+    ).subscribe(f => {
+      this.displayedFlights.push(f);
+      this.sortFlightsByTotalAndFixMissingData();
+      this.progress += 100 / this.flightsCount;
+    });
+    setTimeout(() => this.isLogoInitial = false, 5000);
+  }
+
+  get timeLeft(): number {
+    return this.REQUEST_DEBOUNCE_MS * (100 - this.progress) * this.flightsCount / 100000;
   }
 
   public sortFlightsByTotalAndFixMissingData() {
@@ -49,13 +62,6 @@ export class AppComponent implements OnInit {
   public sortFlightsByFlightCostAndFixMissingData() {
     this.fixMissingFlightsData();
     this.displayedFlights.sort((a, b) => this.sortByFlightCost(a, b));
-  }
-
-  public getProgress(): number {
-    if (!this.displayedFlights.length) {
-      return 0;
-    }
-    return Math.round(this.currentFlights / this.displayedFlights.length * 100);
   }
 
   public getPricePerDay(flight: Flight): number {
@@ -154,7 +160,7 @@ export class AppComponent implements OnInit {
   private mapToDelayedObservableArray<T>(elements: T[]): Observable<T> {
     return from(elements).pipe(
       concatMap(element => {
-        const noisyDebounce = this.requestDebounce + (100 - Math.floor(Math.random() * 200));
+        const noisyDebounce = this.REQUEST_DEBOUNCE_MS + (100 - Math.floor(Math.random() * 200));
         return of(element).pipe(
           delay(noisyDebounce)
         );

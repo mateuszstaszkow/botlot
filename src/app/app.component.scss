@@ -1,30 +1,105 @@
-.container {
-  margin: 1rem;
+@-webkit-keyframes fadeOut {
+  0% { opacity: 1; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-.flight-cell {
-  display: inline-block;
-  margin-right: 2rem;
-  min-width: 300px;
+@-webkit-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-.flight-row-error {
-  color: gray;
+.controls {
+  display: flex;
+  height: 100px;
+
+  mat-form-field {
+    margin-top: 15px;
+    width: 300px;
+  }
+
+  button {
+    height: 40px;
+    padding: 0 30px;
+  }
+}
+
+.fade-in-container {
+  animation: fadeIn 3s;
+}
+
+.flight{
+  &-cell {
+    display: inline-block;
+    margin-right: 2rem;
+    min-width: 300px;
+  }
+
+  &-row {
+    height: 60px;
+    padding-top: 24px;
+
+    &:hover {
+      background-color: #ddd;
+    }
+
+    &-error {
+      color: gray;
+    }
+  }
 }
 
 .full-width {
   width: 100%;
 }
 
-.progress {
-  &-bar {
-    width: 50%;
-    display: inline-block;
+.flights {
+
+  &-progress {
+    &-bar {
+      width: 100%;
+      display: inline-block;
+    }
+
+    &-info {
+      width: 10%;
+      margin: 1rem;
+      display: inline-block;
+    }
   }
-  &-info {
-    width: 10%;
+
+  &-container {
     margin: 1rem;
-    display: inline-block;
+  }
+
+  &-logo {
+    // border-bottom: 5px solid rgb(7, 4, 47);
+    width: 100vw;
+    height: 400px;
+    object-fit: none;
+    object-position: 0 -350px;
+
+    &--initial {
+      height: 100vh;
+      object-position: center;
+      animation: fadeOut 5s;
+    }
+  }
+
+  &-title {
+    margin: -200px 0 200px 0;
+    font-size: 100px;
+    font-weight: bold;
+    text-align: center;
+    color: #efefef;
+    animation: fadeIn 5s;
+    letter-spacing: 40px;
+
+    &.flights-logo--initial {
+      margin: -50vh 0 50vh 0;
+      font-size: 150px;
+      letter-spacing: 60px;
+    }
   }
 }
 
@@ -34,5 +109,4 @@
 
 .sort-button {
   margin: 1rem;
-  width: 10%;
 }
