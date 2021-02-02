@@ -31,12 +31,17 @@
               (click)="sortFlightsByFlightCostAndFixMissingData()">
         Sort by Flight Cost
       </button>
+      <mat-checkbox class="mx-3 mt-2"
+                    color="primary"
+                    [(ngModel)]="isIncompleteVisible">
+        Show incomplete ({{ completeIncompleteFlights + ' / ' + flightsCount }})
+      </mat-checkbox>
     </div>
     <div *ngIf="progress < 100"
          class="my-5 text-center w-100">
     <span *ngIf="flightsCount > 1"
           class="ml-3">
-      {{ progress * flightsCount / 100 + ' / ' + flightsCount + ', time left: ' + timeLeft + ' s' }}
+      {{ formattedProgress + ' / ' + flightsCount + ', time left: ' + timeLeft }}
     </span>
       <mat-progress-bar *ngIf="flightsCount > 1"
                         class="flights-progress-bar"
@@ -52,12 +57,10 @@
       </mat-progress-bar>
     </div>
     <div *ngFor="let flight of displayedFlights">
-      <div *ngIf="flight.weekend && flight.arrival && flight.depart"
+      <div *ngIf="flight.weekend && flight.arrival && flight.depart && isFlightComplete(flight) || isIncompleteVisible"
            class="flight-row"
            [matTooltip]="'Arrival airline: ' + flight.arrival.airline + ', ' + 'Departure airline: ' + flight.depart.airline"
-           [class.flight-row--error]="!flight.hotel
-                               || (!flight.arrival.endDistance && !flight.arrival.startDistance)
-                               || !flight.arrival.endTaxiCost">
+           [class.flight-row--error]="!isFlightComplete(flight)">
         <div class="flight-cell">
           <strong>City to:&nbsp;</strong>
           {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}

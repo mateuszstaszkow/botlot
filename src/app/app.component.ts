@@ -12,13 +12,14 @@ import {ShuttleService} from './shuttle.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  public readonly REQUEST_DEBOUNCE_MS = 1000;
+  public readonly REQUEST_DEBOUNCE_MS = 500;
   public distinctCities: string[];
   public displayedFlights: Flight[] = [];
   public cachedFlights: Flight[] = [];
   public progress = 0;
   public flightsCount = 1;
   public isLogoInitial = true;
+  public isIncompleteVisible = false;
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
 
   constructor(private readonly flightService: FlightService,
@@ -41,12 +42,31 @@ export class AppComponent implements OnInit {
       this.displayedFlights.push(f);
       this.sortFlightsByTotalAndFixMissingData();
       this.progress += 100 / this.flightsCount;
+      console.log(this.progress);
     });
     setTimeout(() => this.isLogoInitial = false, 5000);
   }
 
-  get timeLeft(): number {
-    return this.REQUEST_DEBOUNCE_MS * (100 - this.progress) * this.flightsCount / 100000;
+  get timeLeft(): string {
+    const timeLeft = 3 * this.REQUEST_DEBOUNCE_MS * (100 - this.progress) * this.flightsCount / 100000;
+    if (timeLeft > 60) {
+      return (timeLeft / 60).toFixed(0) + ' min ' + (timeLeft % 60) + ' s';
+    }
+    return timeLeft.toFixed(0) + ' s';
+  }
+
+  get formattedProgress(): string {
+    const progress = this.progress * this.flightsCount / 100;
+    return progress.toFixed(0);
+  }
+
+  get completeIncompleteFlights(): number {
+    const completeFlightsCount = this.displayedFlights.filter(flight => this.isFlightComplete(flight)).length;
+    return this.isIncompleteVisible ? this.flightsCount : completeFlightsCount;
+  }
+
+  public isFlightComplete(flight: Flight): boolean {
+    return !!flight.cost && !!flight.hotel?.cost && !!flight.arrival.startTaxiCost && !!flight.arrival.endTaxiCost;
   }
 
   public sortFlightsByTotalAndFixMissingData() {
@@ -111,10 +131,13 @@ export class AppComponent implements OnInit {
   private fixMissingFlightsData(): void {
     this.displayedFlights.filter(f => f.hotel && (!f.arrival.endTaxiCost || !f.arrival.startTaxiCost))
       .forEach(errorFlight => {
-        const similarFlight = this.displayedFlights.find(f => !!f.arrival.startTaxiCost
+        const similarFlight = this.displayedFlights.find(f =>
+          !!f.arrival.startTaxiCost
           && !!f.hotel
+          && !!errorFlight.hotel
           && f.hotel.name === errorFlight.hotel.name
-          && f.arrival.city === errorFlight.arrival.city);
+          && f.arrival.city === errorFlight.arrival.city
+        );
         if (!similarFlight) {
           return;
         }
