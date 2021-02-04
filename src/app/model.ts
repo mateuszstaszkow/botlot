@@ -11,7 +11,7 @@ export interface Weekend {
 }
 
 export interface Flight {
-  cost: string;
+  cost: number;
   coordinates: [number, number];
   arrival: Airport;
   depart: Airport;

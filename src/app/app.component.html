@@ -21,23 +21,17 @@
                  type="number"
                  formControlName="numberOfPeople">
         </mat-form-field>
+        <mat-form-field>
+          <mat-label>Sort By</mat-label>
+          <mat-select formControlName="sort">
+            <mat-option *ngFor="let type of SORT_BY_TYPES"
+                        [value]="type">
+              {{ type }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
       </form>
-      <button mat-raised-button
-              class="sort-button"
-              (click)="sortFlightsByTotalAndFixMissingData()">
-        Sort by Total
-      </button>
-      <button mat-raised-button
-              class="sort-button"
-              (click)="sortFlightsByPricePerDayAndFixMissingData()">
-        Sort by Price Per Day
-      </button>
-      <button mat-raised-button
-              class="sort-button"
-              (click)="sortFlightsByFlightCostAndFixMissingData()">
-        Sort by Flight Cost
-      </button>
-      <mat-checkbox class="mx-3 mt-2"
+      <mat-checkbox *ngIf="(progress >= 100) && ((completeIncompleteFlights < flightsCount) || isIncompleteVisible)" class="mx-3 mt-2"
                     color="primary"
                     [(ngModel)]="isIncompleteVisible">
         Show incomplete ({{ completeIncompleteFlights + ' / ' + flightsCount }})

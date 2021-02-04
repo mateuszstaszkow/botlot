@@ -7,12 +7,21 @@ import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
 
+enum SortByType {
+  TOTAL = 'TOTAL',
+  PRICE_PER_DAY = 'PRICE_PER_DAY',
+  FLIGHT_COST = 'FLIGHT_COST',
+  FLIGHT_HOTEL_COST = 'FLIGHT_HOTEL_COST'
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
+  public readonly SortByType = SortByType;
+  public readonly SORT_BY_TYPES = Object.values(SortByType);
   public readonly REQUEST_DEBOUNCE_MS = 500;
   public distinctCities: string[];
   public displayedFlights: Flight[] = [];
@@ -24,7 +33,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
   public readonly formGroup = new FormGroup({
     numberOfPeople: new FormControl(''),
-    search: new FormControl('')
+    search: new FormControl(''),
+    sort: new FormControl(SortByType.TOTAL)
   });
   private readonly formsSubscription = new Subscription();
 
@@ -34,6 +44,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initializeFlightsFetch();
+    this.initializeSorting();
     this.formGroup.controls.search.valueChanges
       .subscribe(searchTerm => this.search(searchTerm));
     setTimeout(() => this.isLogoInitial = false, 5000);
@@ -65,19 +76,20 @@ export class AppComponent implements OnInit, OnDestroy {
     return !!flight.cost && !!flight.hotel?.cost && !!flight.arrival.startTaxiCost && !!flight.arrival.endTaxiCost;
   }
 
-  public sortFlightsByTotalAndFixMissingData() {
-    this.fixMissingFlightsData();
+  public sortFlightsByTotal() {
     this.displayedFlights.sort((a, b) => this.sortBySummary(a, b));
   }
 
-  public sortFlightsByPricePerDayAndFixMissingData() {
-    this.fixMissingFlightsData();
+  public sortFlightsByPricePerDay() {
     this.displayedFlights.sort((a, b) => this.sortBySummaryPerDay(a, b));
   }
 
-  public sortFlightsByFlightCostAndFixMissingData() {
-    this.fixMissingFlightsData();
+  public sortFlightsByFlightCost() {
     this.displayedFlights.sort((a, b) => this.sortByFlightCost(a, b));
+  }
+
+  public sortFlightsByFlightAndHotelCost() {
+    this.displayedFlights.sort((a, b) => this.sortByFlightAndHotelCost(a, b));
   }
 
   public getPricePerDay(flight: Flight): number {
@@ -100,6 +112,22 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private initializeSorting(): void {
+    this.formGroup.controls.sort.valueChanges.subscribe(type => {
+      this.fixMissingFlightsData();
+      switch (type) {
+        case SortByType.TOTAL:
+          return this.sortFlightsByTotal();
+        case SortByType.PRICE_PER_DAY:
+          return this.sortFlightsByPricePerDay();
+        case SortByType.FLIGHT_COST:
+          return this.sortFlightsByFlightCost();
+        case SortByType.FLIGHT_HOTEL_COST:
+          return this.sortFlightsByFlightAndHotelCost();
+      }
+    });
+  }
+
   private initializeFlightsFetch(): void {
     this.formsSubscription.add(
       this.formGroup.controls.numberOfPeople.valueChanges.pipe(
@@ -107,7 +135,7 @@ export class AppComponent implements OnInit, OnDestroy {
         concatMap(value => this.searchFlights(value))
       ).subscribe(f => {
         this.displayedFlights.push(f);
-        this.sortFlightsByTotalAndFixMissingData();
+        this.sortFlightsByTotal();
         this.progress += 100 / this.flightsCount;
       })
     );
@@ -172,28 +200,22 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private sortBySummary(a: Flight, b: Flight): number {
-    if (a.summary > b.summary) {
-      return 1;
-    } else if (a.summary < b.summary) {
-      return -1;
-    }
-    return 0;
+    return this.getSortIndicator(a.summary, b.summary);
   }
 
   private sortBySummaryPerDay(a: Flight, b: Flight): number {
-    const aPrice = this.getPricePerDay(a);
-    const bPrice = this.getPricePerDay(b);
-    if (aPrice > bPrice) {
-      return 1;
-    } else if (aPrice < bPrice) {
-      return -1;
-    }
-    return 0;
+    return this.getSortIndicator(this.getPricePerDay(a), this.getPricePerDay(b));
   }
 
   private sortByFlightCost(a: Flight, b: Flight): number {
-    const aPrice = a.cost;
-    const bPrice = b.cost;
+    return this.getSortIndicator(a.cost, b.cost);
+  }
+
+  private sortByFlightAndHotelCost(a: Flight, b: Flight): number {
+    return this.getSortIndicator(a.cost + a.hotel.cost, b.cost + b.hotel.cost);
+  }
+
+  private getSortIndicator(aPrice: number, bPrice: number): number {
     if (aPrice > bPrice) {
       return 1;
     } else if (aPrice < bPrice) {
