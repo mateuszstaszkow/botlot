@@ -14,8 +14,9 @@ export class FlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getFlights(): Observable<Flight[]> {
-    return this.httpClient.get<Flight[]>(this.baseUrl + '/flights');
+  public getFlights(numberOfWeekends: number): Observable<Flight[]> {
+    const url = this.baseUrl + '/flights?numberOfWeekends=' + numberOfWeekends;
+    return this.httpClient.get<Flight[]>(url);
   }
 
   public updateFlightWithAirportCoordinates(flight: Flight): Observable<DetailedFlightAirports> {

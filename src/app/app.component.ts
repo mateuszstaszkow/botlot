@@ -1,5 +1,5 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {from, Observable, of, Subscription} from 'rxjs';
+import {from, merge, Observable, of, Subscription} from 'rxjs';
 import {Flight} from './model';
 import {FlightService} from './flight.service';
 import {concatMap, delay, distinctUntilChanged, filter, map, take, tap} from 'rxjs/operators';
@@ -20,7 +20,6 @@ enum SortByType {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
-  public readonly SortByType = SortByType;
   public readonly SORT_BY_TYPES = Object.values(SortByType);
   public readonly REQUEST_DEBOUNCE_MS = 500;
   public distinctCities: string[];
@@ -33,6 +32,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
   public readonly formGroup = new FormGroup({
     numberOfPeople: new FormControl(''),
+    numberOfWeekends: new FormControl('1'),
     search: new FormControl(''),
     sort: new FormControl(SortByType.TOTAL)
   });
@@ -134,23 +134,27 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private initializeFlightsFetch(): void {
     this.formsSubscription.add(
-      this.formGroup.controls.numberOfPeople.valueChanges.pipe(
-        distinctUntilChanged(),
-        concatMap(value => this.searchFlights(value))
+      merge(
+        this.formGroup.controls.numberOfPeople.valueChanges.pipe(distinctUntilChanged()),
+        this.formGroup.controls.numberOfWeekends.valueChanges.pipe(distinctUntilChanged()),
+      ).pipe(
+        concatMap(() => this.searchFlights())
       ).subscribe(f => {
         this.displayedFlights.push(f);
         this.sortFlightsByTotal();
-        this.progress += 100 / this.flightsCount;
+        this.progress += Math.ceil(100 / this.flightsCount);
       })
     );
     this.formGroup.controls.numberOfPeople.setValue('1');
   }
 
-  private searchFlights(numberOfPeople = this.formGroup.controls.numberOfPeople.value): Observable<Flight> {
+  private searchFlights(): Observable<Flight> {
+    const numberOfPeople = Number(this.formGroup.controls.numberOfPeople.value);
+    const numberOfWeekends = Number(this.formGroup.controls.numberOfWeekends.value);
     this.displayedFlights = [];
     this.progress = 0;
-    return this.flightService.getFlights().pipe(
-      take(1),
+    this.flightsCount = 1;
+    return this.flightService.getFlights(numberOfWeekends).pipe(
       concatMap(flights => {
         this.flightsCount = flights.length;
         return this.mapToDelayedObservableArray<Flight>(flights);
