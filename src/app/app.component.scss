@@ -32,7 +32,8 @@
   .flights-logo:not(.flights-logo--initial) {
     height: 200px !important;
     width: 100vw;
-    object-position: -700px -460px !important;
+    object-fit: fill !important;
+    object-position: 0 !important;
   }
 }
 
@@ -40,6 +41,10 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
+
+  &__count {
+    margin: 0 1rem;
+  }
 
   &__search {
     margin: 15px 0.5rem 0 0.5rem;

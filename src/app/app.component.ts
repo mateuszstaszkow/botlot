@@ -72,6 +72,10 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.isIncompleteVisible ? this.flightsCount : completeFlightsCount;
   }
 
+  public isIncompleteCheckboxVisible(): boolean {
+    return (this.progress >= 100) && ((this.completeIncompleteFlights < this.flightsCount) || this.isIncompleteVisible);
+  }
+
   public isFlightComplete(flight: Flight): boolean {
     return !!flight.cost && !!flight.hotel?.cost && !!flight.arrival.startTaxiCost && !!flight.arrival.endTaxiCost;
   }

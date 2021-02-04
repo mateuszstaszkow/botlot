@@ -31,11 +31,16 @@
           </mat-select>
         </mat-form-field>
       </form>
-      <mat-checkbox *ngIf="(progress >= 100) && ((completeIncompleteFlights < flightsCount) || isIncompleteVisible)" class="mx-3 mt-2"
+      <mat-checkbox *ngIf="isIncompleteCheckboxVisible()" class="mx-3 mt-2"
                     color="primary"
                     [(ngModel)]="isIncompleteVisible">
         Show incomplete ({{ completeIncompleteFlights + ' / ' + flightsCount }})
       </mat-checkbox>
+      <div *ngIf="!isIncompleteCheckboxVisible()"
+           class="controls__count">
+        Flights:&nbsp;
+        <strong>{{ displayedFlights.length }}</strong>
+      </div>
     </div>
     <div *ngIf="progress < 100"
          class="my-5 text-center w-100">
