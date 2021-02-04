@@ -1,17 +1,18 @@
-import {Component, OnInit} from '@angular/core';
-import {from, Observable, of} from 'rxjs';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {from, Observable, of, Subscription} from 'rxjs';
 import {Flight} from './model';
 import {FlightService} from './flight.service';
-import {concatMap, delay, map} from 'rxjs/operators';
+import {concatMap, delay, distinctUntilChanged, filter, map, take, tap} from 'rxjs/operators';
 import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
+import {FormControl, FormGroup} from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   public readonly REQUEST_DEBOUNCE_MS = 500;
   public distinctCities: string[];
   public displayedFlights: Flight[] = [];
@@ -21,30 +22,25 @@ export class AppComponent implements OnInit {
   public isLogoInitial = true;
   public isIncompleteVisible = false;
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
+  public readonly formGroup = new FormGroup({
+    numberOfPeople: new FormControl(''),
+    search: new FormControl('')
+  });
+  private readonly formsSubscription = new Subscription();
 
   constructor(private readonly flightService: FlightService,
               private readonly hotelService: HotelService,
               private readonly shuttleService: ShuttleService) {}
 
-  // TODO: add delay
   ngOnInit(): void {
-    this.flightService.getFlights().pipe(
-      concatMap(flights => {
-        this.flightsCount = flights.length;
-        return this.mapToDelayedObservableArray<Flight>(flights);
-      }),
-      concatMap(flight => this.hotelService.updateFlightWithHotelDetails(flight)),
-      concatMap((f: Flight) => this.flightService.updateFlightWithAirportCoordinates(f).pipe(
-        map(detailedFlight => ({ ...f, detailedFlight }))
-      )),
-      concatMap(f => f.detailedFlight ? this.shuttleService.updateFlightWithShuttle(f) : of(f))
-    ).subscribe(f => {
-      this.displayedFlights.push(f);
-      this.sortFlightsByTotalAndFixMissingData();
-      this.progress += 100 / this.flightsCount;
-      console.log(this.progress);
-    });
+    this.initializeFlightsFetch();
+    this.formGroup.controls.search.valueChanges
+      .subscribe(searchTerm => this.search(searchTerm));
     setTimeout(() => this.isLogoInitial = false, 5000);
+  }
+
+  ngOnDestroy(): void {
+    this.formsSubscription.unsubscribe();
   }
 
   get timeLeft(): string {
@@ -104,9 +100,35 @@ export class AppComponent implements OnInit {
     }
   }
 
-  public onSearchKeyUp(event: Event): void {
-    const searchTerm: string = (<any>event.target).value;
-    this.search(searchTerm);
+  private initializeFlightsFetch(): void {
+    this.formsSubscription.add(
+      this.formGroup.controls.numberOfPeople.valueChanges.pipe(
+        distinctUntilChanged(),
+        concatMap(value => this.searchFlights(value))
+      ).subscribe(f => {
+        this.displayedFlights.push(f);
+        this.sortFlightsByTotalAndFixMissingData();
+        this.progress += 100 / this.flightsCount;
+      })
+    );
+    this.formGroup.controls.numberOfPeople.setValue('1');
+  }
+
+  private searchFlights(numberOfPeople = this.formGroup.controls.numberOfPeople.value): Observable<Flight> {
+    this.displayedFlights = [];
+    this.progress = 0;
+    return this.flightService.getFlights().pipe(
+      take(1),
+      concatMap(flights => {
+        this.flightsCount = flights.length;
+        return this.mapToDelayedObservableArray<Flight>(flights);
+      }),
+      concatMap(flight => this.hotelService.updateFlightWithHotelDetails(flight, numberOfPeople)),
+      concatMap((f: Flight) => this.flightService.updateFlightWithAirportCoordinates(f).pipe(
+        map(detailedFlight => ({ ...f, detailedFlight }))
+      )),
+      concatMap(f => f.detailedFlight ? this.shuttleService.updateFlightWithShuttle(f, numberOfPeople) : of(f)),
+    );
   }
 
   private search(term: string): void {

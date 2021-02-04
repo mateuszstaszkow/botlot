@@ -13,7 +13,8 @@ export class ShuttleService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public updateFlightWithShuttle(flight: Flight): Observable<Flight> {
-    return this.httpClient.post<Flight>(this.baseUrl + '/flight-shuttle', flight);
+  public updateFlightWithShuttle(flight: Flight, numberOfPeople: number): Observable<Flight> {
+    const url = this.baseUrl + '/flight-shuttle?numberOfPeople=' + numberOfPeople;
+    return this.httpClient.post<Flight>(url, flight);
   }
 }

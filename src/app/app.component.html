@@ -9,11 +9,17 @@
   </h1>
   <div class="flights-container">
     <div class="controls">
-      <form>
-        <mat-form-field>
+      <form [formGroup]="formGroup">
+        <mat-form-field class="controls__search">
           <input matInput
                  placeholder="Search"
-                 (keyup)="onSearchKeyUp($event)">
+                 formControlName="search">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Number of People"
+                 type="number"
+                 formControlName="numberOfPeople">
         </mat-form-field>
       </form>
       <button mat-raised-button
