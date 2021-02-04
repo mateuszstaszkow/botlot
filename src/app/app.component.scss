@@ -16,6 +16,10 @@
 }
 
 @media only screen and (max-width: 1000px) {
+  mat-checkbox, .controls__count {
+    margin: 0.5rem auto 2rem auto !important;
+  }
+
   mat-form-field, button {
     width: 100% !important;
   }
@@ -47,12 +51,10 @@
   }
 
   &__search {
-    margin: 15px 0.5rem 0 0.5rem;
     width: 250px;
   }
 
   &__number {
-    margin: 15px 0.5rem 0 0.5rem;
     width: 120px;
   }
 
@@ -146,6 +148,10 @@
       letter-spacing: 60px;
     }
   }
+}
+
+mat-form-field {
+  margin: 15px 0.5rem 0 0.5rem;
 }
 
 .search-field {

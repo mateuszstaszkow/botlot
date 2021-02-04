@@ -29,6 +29,22 @@
                  max="16"
                  formControlName="numberOfWeekends">
         </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Depart from"
+                 type="number"
+                 min="1"
+                 max="23"
+                 formControlName="departFrom">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Return from"
+                 type="number"
+                 min="1"
+                 max="23"
+                 formControlName="returnFrom">
+        </mat-form-field>
         <mat-form-field>
           <mat-label>Sort By</mat-label>
           <mat-select formControlName="sort">

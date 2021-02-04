@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {DetailedFlightAirports, Flight} from './model';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '../environments/environment';
 
@@ -14,9 +14,12 @@ export class FlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getFlights(numberOfWeekends: number): Observable<Flight[]> {
-    const url = this.baseUrl + '/flights?numberOfWeekends=' + numberOfWeekends;
-    return this.httpClient.get<Flight[]>(url);
+  public getFlights(numberOfWeekends: number, departFrom: number, returnFrom: number): Observable<Flight[]> {
+    const params = new HttpParams()
+      .append('numberOfWeekends', String(numberOfWeekends))
+      .append('departFrom', String(departFrom))
+      .append('returnFrom', String(returnFrom));
+    return this.httpClient.get<Flight[]>(this.baseUrl + '/flights', { params });
   }
 
   public updateFlightWithAirportCoordinates(flight: Flight): Observable<DetailedFlightAirports> {

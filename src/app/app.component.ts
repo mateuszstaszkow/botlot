@@ -2,7 +2,7 @@ import {Component, OnDestroy, OnInit} from '@angular/core';
 import {from, merge, Observable, of, Subscription} from 'rxjs';
 import {Flight} from './model';
 import {FlightService} from './flight.service';
-import {concatMap, delay, distinctUntilChanged, filter, map, take, tap} from 'rxjs/operators';
+import {concatMap, delay, distinctUntilChanged, map} from 'rxjs/operators';
 import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
@@ -22,6 +22,15 @@ enum SortByType {
 export class AppComponent implements OnInit, OnDestroy {
   public readonly SORT_BY_TYPES = Object.values(SortByType);
   public readonly REQUEST_DEBOUNCE_MS = 500;
+  public readonly formGroup = new FormGroup({
+    numberOfPeople: new FormControl(''),
+    numberOfWeekends: new FormControl('1'),
+    departFrom: new FormControl('15'),
+    returnFrom: new FormControl('10'),
+    search: new FormControl(''),
+    sort: new FormControl(SortByType.TOTAL)
+  });
+
   public distinctCities: string[];
   public displayedFlights: Flight[] = [];
   public cachedFlights: Flight[] = [];
@@ -29,13 +38,8 @@ export class AppComponent implements OnInit, OnDestroy {
   public flightsCount = 1;
   public isLogoInitial = true;
   public isIncompleteVisible = false;
+
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
-  public readonly formGroup = new FormGroup({
-    numberOfPeople: new FormControl(''),
-    numberOfWeekends: new FormControl('1'),
-    search: new FormControl(''),
-    sort: new FormControl(SortByType.TOTAL)
-  });
   private readonly formsSubscription = new Subscription();
 
   constructor(private readonly flightService: FlightService,
@@ -137,6 +141,8 @@ export class AppComponent implements OnInit, OnDestroy {
       merge(
         this.formGroup.controls.numberOfPeople.valueChanges.pipe(distinctUntilChanged()),
         this.formGroup.controls.numberOfWeekends.valueChanges.pipe(distinctUntilChanged()),
+        this.formGroup.controls.departFrom.valueChanges.pipe(distinctUntilChanged()),
+        this.formGroup.controls.returnFrom.valueChanges.pipe(distinctUntilChanged()),
       ).pipe(
         concatMap(() => this.searchFlights())
       ).subscribe(f => {
@@ -151,10 +157,12 @@ export class AppComponent implements OnInit, OnDestroy {
   private searchFlights(): Observable<Flight> {
     const numberOfPeople = Number(this.formGroup.controls.numberOfPeople.value);
     const numberOfWeekends = Number(this.formGroup.controls.numberOfWeekends.value);
+    const departFrom = Number(this.formGroup.controls.departFrom.value);
+    const returnFrom = Number(this.formGroup.controls.returnFrom.value);
     this.displayedFlights = [];
     this.progress = 0;
     this.flightsCount = 1;
-    return this.flightService.getFlights(numberOfWeekends).pipe(
+    return this.flightService.getFlights(numberOfWeekends, departFrom, returnFrom).pipe(
       concatMap(flights => {
         this.flightsCount = flights.length;
         return this.mapToDelayedObservableArray<Flight>(flights);
