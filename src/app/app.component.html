@@ -12,6 +12,19 @@
       <form [formGroup]="formGroup">
         <mat-form-field class="controls__search">
           <input matInput
+                 placeholder="City"
+                 formControlName="city"
+                 [matAutocomplete]="auto">
+          <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
+            <mat-option *ngFor="let cityCode of citySuggestions$ | async"
+                        [value]="mapToCityAndCountry(cityCode)"
+                        (click)="assignCityCodeAndGetFlights(cityCode)">
+              {{ mapToCityAndCountry(cityCode) }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field class="controls__search">
+          <input matInput
                  placeholder="Search"
                  formControlName="search">
         </mat-form-field>

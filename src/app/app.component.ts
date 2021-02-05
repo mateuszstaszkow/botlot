@@ -1,8 +1,8 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {from, merge, Observable, of, Subscription} from 'rxjs';
-import {Flight} from './model';
+import {from, merge, Observable, of, Subject, Subscription} from 'rxjs';
+import {CityCodeDto, Flight} from './model';
 import {FlightService} from './flight.service';
-import {concatMap, delay, distinctUntilChanged, map} from 'rxjs/operators';
+import {catchError, concatMap, debounceTime, delay, distinctUntilChanged, filter, map} from 'rxjs/operators';
 import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
@@ -28,7 +28,8 @@ export class AppComponent implements OnInit, OnDestroy {
     departFrom: new FormControl('15'),
     returnFrom: new FormControl('10'),
     search: new FormControl(''),
-    sort: new FormControl(SortByType.TOTAL)
+    sort: new FormControl(SortByType.TOTAL),
+    city: new FormControl('')
   });
 
   public distinctCities: string[];
@@ -38,9 +39,17 @@ export class AppComponent implements OnInit, OnDestroy {
   public flightsCount = 1;
   public isLogoInitial = true;
   public isIncompleteVisible = false;
+  public citySuggestions$: Observable<CityCodeDto[]>;
 
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
   private readonly formsSubscription = new Subscription();
+
+  private currentCity: CityCodeDto = {
+    code: '/m/081m_',
+    city: 'Warsaw',
+    geocode: [21.0067249, 52.2319581]
+  };
+  private currentCity$ = new Subject<CityCodeDto>();
 
   constructor(private readonly flightService: FlightService,
               private readonly hotelService: HotelService,
@@ -49,6 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initializeFlightsFetch();
     this.initializeSorting();
+    this.initializeCitySuggestions();
     this.formGroup.controls.search.valueChanges
       .subscribe(searchTerm => this.search(searchTerm));
     setTimeout(() => this.isLogoInitial = false, 5000);
@@ -120,6 +130,27 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  public assignCityCodeAndGetFlights(cityCode: CityCodeDto): void {
+    this.currentCity = cityCode;
+    this.currentCity$.next(cityCode);
+  }
+
+  public mapToCityAndCountry(cityCode: CityCodeDto): string {
+    return cityCode.country ? cityCode.city + ', ' + cityCode.country : cityCode.city;
+  }
+
+  private initializeCitySuggestions(): void {
+    const cityForm = this.formGroup.controls.city;
+    this.citySuggestions$ = cityForm.valueChanges.pipe(
+      distinctUntilChanged(),
+      filter(value => value?.length > 2),
+      debounceTime(200),
+      concatMap(term => this.flightService.getCityCodes(term)),
+      catchError(() => of([]))
+    );
+    cityForm.setValue('Warsaw');
+  }
+
   private initializeSorting(): void {
     this.formGroup.controls.sort.valueChanges.subscribe(type => {
       this.fixMissingFlightsData();
@@ -143,6 +174,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.formGroup.controls.numberOfWeekends.valueChanges.pipe(distinctUntilChanged()),
         this.formGroup.controls.departFrom.valueChanges.pipe(distinctUntilChanged()),
         this.formGroup.controls.returnFrom.valueChanges.pipe(distinctUntilChanged()),
+        this.currentCity$
       ).pipe(
         concatMap(() => this.searchFlights())
       ).subscribe(f => {
@@ -162,11 +194,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.displayedFlights = [];
     this.progress = 0;
     this.flightsCount = 1;
-    return this.flightService.getFlights(numberOfWeekends, departFrom, returnFrom).pipe(
+    return this.flightService.getFlights(numberOfWeekends, departFrom, returnFrom, this.currentCity.code).pipe(
       concatMap(flights => {
         this.flightsCount = flights.length;
         return this.mapToDelayedObservableArray<Flight>(flights);
       }),
+      map(flight => ({ ...flight, start: this.currentCity })),
       concatMap(flight => this.hotelService.updateFlightWithHotelDetails(flight, numberOfPeople)),
       concatMap((f: Flight) => this.flightService.updateFlightWithAirportCoordinates(f).pipe(
         map(detailedFlight => ({ ...f, detailedFlight }))
@@ -228,7 +261,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private sortByFlightAndHotelCost(a: Flight, b: Flight): number {
-    return this.getSortIndicator(a.cost + a.hotel.cost, b.cost + b.hotel.cost);
+    return this.getSortIndicator(a.cost + a.hotel?.cost, b.cost + b.hotel?.cost);
   }
 
   private getSortIndicator(aPrice: number, bPrice: number): number {

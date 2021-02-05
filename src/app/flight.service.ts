@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {DetailedFlightAirports, Flight} from './model';
+import {CityCodeDto, DetailedFlightAirports, Flight} from './model';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '../environments/environment';
@@ -14,15 +14,20 @@ export class FlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getFlights(numberOfWeekends: number, departFrom: number, returnFrom: number): Observable<Flight[]> {
+  public getFlights(numberOfWeekends: number, departFrom: number, returnFrom: number, cityCode: string): Observable<Flight[]> {
     const params = new HttpParams()
       .append('numberOfWeekends', String(numberOfWeekends))
       .append('departFrom', String(departFrom))
-      .append('returnFrom', String(returnFrom));
+      .append('returnFrom', String(returnFrom))
+      .append('cityCode', cityCode);
     return this.httpClient.get<Flight[]>(this.baseUrl + '/flights', { params });
   }
 
   public updateFlightWithAirportCoordinates(flight: Flight): Observable<DetailedFlightAirports> {
     return this.httpClient.post<DetailedFlightAirports>(this.baseUrl + '/flight-airport-coordinates', flight);
+  }
+
+  public getCityCodes(city: string): Observable<CityCodeDto[]> {
+    return this.httpClient.get<CityCodeDto[]>(this.baseUrl + '/flight-city-codes/' + city);
   }
 }
