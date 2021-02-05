@@ -7,16 +7,21 @@ url: TODO
 
 ---
 
-Development:
+#### Development:
 - Project run: `ng serve`
 - Project build `ng build --prod`
 - API: [botlot-backend](https://github.com/mateuszstaszkow/botlot-backend)
 
-
 ---
 
-External Services:
+#### External Services:
 - Google Flights
 - Agoda
 - OpenCage
 - Numbeo
+
+---
+
+#### Example screens:
+
+![logo](./src/assets/images/example-search.jpg)
