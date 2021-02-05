@@ -2,7 +2,7 @@ import {Component, OnDestroy, OnInit} from '@angular/core';
 import {from, merge, Observable, of, Subject, Subscription} from 'rxjs';
 import {CityCodeDto, Flight} from './model';
 import {FlightService} from './flight.service';
-import {catchError, concatMap, debounceTime, delay, distinctUntilChanged, filter, map} from 'rxjs/operators';
+import {catchError, concatMap, debounceTime, delay, distinctUntilChanged, filter, map, switchMap} from 'rxjs/operators';
 import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
@@ -176,7 +176,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.formGroup.controls.returnFrom.valueChanges.pipe(distinctUntilChanged()),
         this.currentCity$
       ).pipe(
-        concatMap(() => this.searchFlights())
+        switchMap(() => this.searchFlights())
       ).subscribe(f => {
         this.displayedFlights.push(f);
         this.sortFlightsByTotal();
