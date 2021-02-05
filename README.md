@@ -3,7 +3,7 @@
 # Botlot
 Flights, hotels and taxis aggregation for weekend trips
 
-url: TODO
+url: https://botlot-frontend.azurewebsites.net/
 
 ---
 
