@@ -33,4 +33,4 @@ jobs:
         app-name: 'botlot-frontend'
         slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_4495d9e579b94220b01ef7ea85c67c34 }}
-        package: .
+        package: ./dist/botlot
