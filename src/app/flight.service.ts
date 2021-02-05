@@ -14,12 +14,13 @@ export class FlightService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public getFlights(numberOfWeekends: number, departFrom: number, returnFrom: number, cityCode: string): Observable<Flight[]> {
+  public getFlights(numberOfWeekends: number, departFrom: number, returnFrom: number, cityCode: CityCodeDto): Observable<Flight[]> {
     const params = new HttpParams()
       .append('numberOfWeekends', String(numberOfWeekends))
       .append('departFrom', String(departFrom))
       .append('returnFrom', String(returnFrom))
-      .append('cityCode', cityCode);
+      .append('code', cityCode.code)
+      .append('geocode', String(JSON.stringify(cityCode.geocode)));
     return this.httpClient.get<Flight[]>(this.baseUrl + '/flights', { params });
   }
 

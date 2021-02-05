@@ -194,7 +194,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.displayedFlights = [];
     this.progress = 0;
     this.flightsCount = 1;
-    return this.flightService.getFlights(numberOfWeekends, departFrom, returnFrom, this.currentCity.code).pipe(
+    return this.flightService.getFlights(numberOfWeekends, departFrom, returnFrom, this.currentCity).pipe(
       concatMap(flights => {
         this.flightsCount = flights.length;
         return this.mapToDelayedObservableArray<Flight>(flights);
