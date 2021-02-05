@@ -1,111 +1,140 @@
-<div style="text-align:center">
-  <h1>
-    Welcome to {{ title }}!
+<div [class.fade-in-container]="!isLogoInitial">
+  <img class="flights-logo"
+       [class.flights-logo--initial]="isLogoInitial"
+       alt="Angular Logo"
+       src="/assets/images/logo-hd.jpg">
+  <h1 class="flights-title"
+      [class.flights-logo--initial]="isLogoInitial">
+    BOTLOT
   </h1>
-  <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-</div>
-<div class="container">
-  <div class="full-width">
-    <form class="search-field">
-      <mat-form-field class="full-width">
-        <input matInput
-               placeholder="Search"
-               (keyup)="onSearchKeyUp($event)">
-      </mat-form-field>
-    </form>
-  </div>
-  <div class="full-width">
-    <button mat-raised-button
-            class="sort-button"
-            (click)="sortFlightsByTotalAndFixMissingData()">
-      Sort by Total
-    </button>
-    <button mat-raised-button
-            class="sort-button"
-            (click)="sortFlightsByPricePerDayAndFixMissingData()">
-      Sort by Price Per Day
-    </button>
-    <button mat-raised-button
-            class="sort-button"
-            (click)="sortFlightsByFlightCostAndFixMissingData()">
-      Sort by Flight Cost
-    </button>
-<!--    <ng-container *ngIf="getProgress() as progress; else indeterminateProgress">-->
-<!--      <ng-container *ngIf="progress < 100">-->
-<!--        <mat-progress-bar class="progress-bar"-->
-<!--                          mode="determinate"-->
-<!--                          [value]="progress">-->
-<!--        </mat-progress-bar>-->
-<!--        <span class="progress-info">-->
-<!--        {{ progress + ' %' + ' (time left: ' + (filteredFlights.length - currentFlights) * requestDebounce / 1000 + ' s)' }}-->
-<!--      </span>-->
-<!--      </ng-container>-->
-<!--      <ng-container *ngIf="progress >= 100 && distinctCities && distinctCities.length">-->
-<!--        <ng-container *ngIf="getTaxiProgress() as taxiProgress">-->
-<!--          <ng-container *ngIf="taxiProgress < 100">-->
-<!--            <mat-progress-bar class="progress-bar"-->
-<!--                              mode="determinate"-->
-<!--                              color="warn"-->
-<!--                              [value]="taxiProgress">-->
-<!--            </mat-progress-bar>-->
-<!--            <span class="progress-info">-->
-<!--            &lt;!&ndash;TODO: fix time left&ndash;&gt;-->
-<!--              {{-->
-<!--              taxiProgress + ' %' + ' (time left: '-->
-<!--              + (distinctCities.length - taxiRequestTime).toFixed(2) + ' s)'-->
-<!--              }}-->
-<!--          </span>-->
-<!--          </ng-container>-->
-<!--          <ng-container *ngIf="taxiProgress >= 100">-->
-<!--            {{ filteredFlights.length + ' results:' }}-->
-<!--          </ng-container>-->
-<!--        </ng-container>-->
-<!--      </ng-container>-->
-<!--    </ng-container>-->
-  </div>
-  <div *ngFor="let flight of displayedFlights">
-    <div *ngIf="flight.weekend && flight.arrival && flight.depart"
-         [class.flight-row-error]="!flight.hotel
-                               || (!flight.arrival.endDistance && !flight.arrival.startDistance)
-                               || !flight.arrival.endTaxiCost">
-      <div class="flight-cell">
-        <strong>City to:&nbsp;</strong>
-        {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
+  <div class="flights-container">
+    <div class="controls">
+      <form [formGroup]="formGroup">
+        <mat-form-field class="controls__search">
+          <input matInput
+                 placeholder="City"
+                 formControlName="city"
+                 [matAutocomplete]="auto">
+          <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
+            <mat-option *ngFor="let cityCode of citySuggestions$ | async"
+                        [value]="mapToCityAndCountry(cityCode)"
+                        (click)="assignCityCodeAndGetFlights(cityCode)">
+              {{ mapToCityAndCountry(cityCode) }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field class="controls__search">
+          <input matInput
+                 placeholder="Search"
+                 formControlName="search">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Number of People"
+                 type="number"
+                 formControlName="numberOfPeople">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Number of Weekends"
+                 type="number"
+                 min="1"
+                 max="16"
+                 formControlName="numberOfWeekends">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Depart from"
+                 type="number"
+                 min="1"
+                 max="23"
+                 formControlName="departFrom">
+        </mat-form-field>
+        <mat-form-field class="controls__number">
+          <input matInput
+                 placeholder="Return from"
+                 type="number"
+                 min="1"
+                 max="23"
+                 formControlName="returnFrom">
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Sort By</mat-label>
+          <mat-select formControlName="sort">
+            <mat-option *ngFor="let type of SORT_BY_TYPES"
+                        [value]="type">
+              {{ type }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+      <mat-checkbox *ngIf="isIncompleteCheckboxVisible()" class="mx-3 mt-2"
+                    color="primary"
+                    [(ngModel)]="isIncompleteVisible">
+        Show incomplete ({{ completeIncompleteFlights + ' / ' + flightsCount }})
+      </mat-checkbox>
+      <div *ngIf="!isIncompleteCheckboxVisible()"
+           class="controls__count">
+        Flights:&nbsp;
+        <strong>{{ displayedFlights.length }}</strong>
       </div>
-      <div *ngIf="flight.arrival.city !== flight.depart.city"
-           class="flight-cell">
-        <strong>City from:&nbsp;</strong>
-        {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
+    </div>
+    <div *ngIf="progress < 100"
+         class="my-5 text-center w-100">
+    <span *ngIf="flightsCount > 1"
+          class="ml-3">
+      {{ formattedProgress + ' / ' + flightsCount + ', time left: ' + timeLeft }}
+    </span>
+      <mat-progress-bar *ngIf="flightsCount > 1"
+                        class="flights-progress-bar"
+                        mode="determinate"
+                        color="primary"
+                        [value]="progress">
+      </mat-progress-bar>
+      <span *ngIf="flightsCount === 1" class="ml-3">Loading flights</span>
+      <mat-progress-bar *ngIf="flightsCount === 1"
+                        class="flights-progress-bar"
+                        mode="indeterminate"
+                        color="primary">
+      </mat-progress-bar>
+    </div>
+    <div *ngFor="let flight of displayedFlights">
+      <div *ngIf="flight.weekend && flight.arrival && flight.depart && isFlightComplete(flight) || isIncompleteVisible"
+           class="flight-row"
+           [matTooltip]="'Arrival airline: ' + flight.arrival.airline + ', ' + 'Departure airline: ' + flight.depart.airline"
+           [class.flight-row--error]="!isFlightComplete(flight)">
+        <div class="flight-cell">
+          <strong>City to:&nbsp;</strong>
+          {{ flight.arrival.city + ' (' + flight.arrival.country + ')' }}
+        </div>
+        <div *ngIf="flight.arrival.city !== flight.depart.city"
+             class="flight-cell">
+          <strong>City from:&nbsp;</strong>
+          {{ flight.depart.city + ' (' + flight.depart.country + ')' }}
+        </div>
+        <div class="flight-cell">
+          <strong>Date:&nbsp;</strong>
+          {{ flight.weekend.startDay + ' / ' + flight.weekend.endDay + ' (from ' + getDayName(flight) + ')' }}
+        </div>
+        <div class="flight-cell">
+          <strong>Cost per day:&nbsp;</strong>
+          {{ getPricePerDay(flight) }}
+        </div>
+        <div class="flight-cell">
+          <strong>Total Cost:&nbsp;</strong>
+          {{
+          flight.summary
+          + ' (' + flight.cost + ' zł + '
+          + (flight.hotel ? flight.hotel.cost : 0) + ' zł + '
+          + (flight.arrival.startTaxiCost || '0') + ' zł + '
+          + (flight.arrival.endTaxiCost || '0') + ' zł)'
+          }}
+        </div>
+        <div class="flight-cell">
+          <strong>Hotel:&nbsp;</strong>
+          {{ flight.hotel ? flight.hotel.name : 'Unknown' }}
+        </div>
       </div>
-      <div class="flight-cell">
-        <strong>Date:&nbsp;</strong>
-        {{ flight.weekend.startDay + ' / ' + flight.weekend.endDay + ' (from ' + getDayName(flight) + ')' }}
-      </div>
-      <div class="flight-cell">
-        <strong>Cost per day:&nbsp;</strong>
-        {{ getPricePerDay(flight) }}
-      </div>
-      <div class="flight-cell">
-        <strong>Total Cost:&nbsp;</strong>
-        {{
-        flight.summary
-        + ' (' + flight.cost + ' zł + '
-        + (flight.hotel ? flight.hotel.cost : 0) + ' zł + '
-        + (flight.arrival.startTaxiCost || '0') + ' zł + '
-        + (flight.arrival.endTaxiCost || '0') + ' zł)'
-        }}
-      </div>
-      <div class="flight-cell">
-        <strong>Hotel:&nbsp;</strong>
-        {{ flight.hotel ? flight.hotel.name : 'Unknown' }}
-      </div>
-      <hr/>
     </div>
   </div>
 </div>
-
-<ng-template #indeterminateProgress>
-  <mat-progress-bar class="progress-bar"
-                    mode="indeterminate">
-  </mat-progress-bar>
-</ng-template>

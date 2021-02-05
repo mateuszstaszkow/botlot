@@ -1,31 +1,157 @@
-.container {
-  margin: 1rem;
+@-webkit-keyframes fadeOut {
+  0% { opacity: 1; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-.flight-cell {
-  display: inline-block;
-  margin-right: 2rem;
-  min-width: 300px;
+@-webkit-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-.flight-row-error {
-  color: gray;
+@media only screen and (min-width: 1000px) {
+  .flights-logo {
+    width: 100vw;
+  }
+}
+
+@media only screen and (max-width: 1000px) {
+  mat-checkbox, .controls__count {
+    margin: 0.5rem auto 2rem auto !important;
+  }
+
+  mat-form-field, button {
+    width: 100% !important;
+  }
+
+  .flights-title, .flights-logo--initial {
+    letter-spacing: 20px !important;
+    font-size: 50px !important;
+  }
+
+  .flights-title:not(.flights-logo--initial) {
+    margin: -110px -20px 110px 0 !important;
+  }
+
+  .flights-logo:not(.flights-logo--initial) {
+    height: 200px !important;
+    width: 100vw;
+    object-fit: fill !important;
+    object-position: 0 !important;
+  }
+}
+
+.controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+
+  &__count {
+    margin: 0 1rem;
+  }
+
+  &__search {
+    width: 250px;
+  }
+
+  &__number {
+    width: 120px;
+  }
+
+  button {
+    height: 40px;
+    padding: 0 30px;
+  }
+}
+
+
+.fade-in-container {
+  animation: fadeIn 3s;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  position: fixed;
+  height: 100vh;
+  width: 100vw;
+}
+
+.flight {
+  &-cell {
+    margin: 0.5rem;
+    width: 350px;
+  }
+
+  &-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid lightgray;
+    flex-wrap: wrap;
+
+    &:hover {
+      background-color: #ddd;
+    }
+
+    &--error {
+      color: gray;
+    }
+  }
 }
 
 .full-width {
   width: 100%;
 }
 
-.progress {
-  &-bar {
-    width: 50%;
-    display: inline-block;
+.flights {
+
+  &-progress {
+    &-bar {
+      width: 100%;
+      display: inline-block;
+    }
+
+    &-info {
+      width: 10%;
+      margin: 1rem;
+      display: inline-block;
+    }
   }
-  &-info {
-    width: 10%;
+
+  &-container {
     margin: 1rem;
-    display: inline-block;
   }
+
+  &-logo {
+    height: 400px;
+    object-fit: none;
+    object-position: 0 -350px;
+
+    &--initial {
+      height: 100vh;
+      object-position: center;
+      animation: fadeOut 5s;
+    }
+  }
+
+  &-title {
+    margin: -200px 0 200px 0;
+    font-size: 100px;
+    font-weight: bold;
+    text-align: center;
+    color: #efefef;
+    animation: fadeIn 5s;
+    letter-spacing: 40px;
+
+    &.flights-logo--initial {
+      margin: -50vh 0 50vh 0;
+      font-size: 150px;
+      letter-spacing: 60px;
+    }
+  }
+}
+
+mat-form-field {
+  margin: 15px 0.5rem 0 0.5rem;
 }
 
 .search-field {
@@ -34,5 +160,4 @@
 
 .sort-button {
   margin: 1rem;
-  width: 10%;
 }

@@ -11,7 +11,7 @@ export interface Weekend {
 }
 
 export interface Flight {
-  cost: string;
+  cost: number;
   coordinates: [number, number];
   arrival: Airport;
   depart: Airport;
@@ -19,8 +19,9 @@ export interface Flight {
   isRound: boolean;
   summary?: number;
   hotel?: Hotel;
-  invocations?: number; // TODO: remove
+  invocations?: number;
   detailedFlight?: DetailedFlightAirports;
+  start?: CityCodeDto;
 }
 
 export interface Airport {
@@ -51,4 +52,11 @@ export interface DetailedAirport {
 export interface DetailedFlightAirports {
   start: DetailedAirport;
   end: DetailedAirport;
+}
+
+export interface CityCodeDto {
+  code: string;
+  city: string;
+  country?: string;
+  geocode: number[];
 }

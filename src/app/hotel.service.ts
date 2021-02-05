@@ -13,7 +13,8 @@ export class HotelService {
   constructor(private readonly httpClient: HttpClient) {
   }
 
-  public updateFlightWithHotelDetails(flight: Flight): Observable<Flight> {
-    return this.httpClient.post<Flight>(this.baseUrl + '/flight-hotels', flight);
+  public updateFlightWithHotelDetails(flight: Flight, numberOfPeople: number): Observable<Flight> {
+    const url = this.baseUrl + '/flight-hotels?numberOfPeople=' + numberOfPeople;
+    return this.httpClient.post<Flight>(url, flight);
   }
 }

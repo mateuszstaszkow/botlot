@@ -8,6 +8,12 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {MatOptionModule} from '@angular/material/core';
+import {MatSelectModule} from '@angular/material/select';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
 
 @NgModule({
   declarations: [
@@ -20,7 +26,14 @@ import {MatInputModule} from '@angular/material/input';
     BrowserAnimationsModule,
     MatProgressBarModule,
     MatFormFieldModule,
-    MatInputModule
+    MatInputModule,
+    MatTooltipModule,
+    MatCheckboxModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatOptionModule,
+    MatSelectModule,
+    MatAutocompleteModule
   ],
   providers: [],
   bootstrap: [AppComponent]
