@@ -1,8 +1,7 @@
 FROM node:12.8.1 AS compile-image
 
-RUN npm install && npm install -g @angular/cli
-
 COPY . ./
+RUN npm install && npm install -g @angular/cli
 RUN npm run build
 
 FROM nginx
