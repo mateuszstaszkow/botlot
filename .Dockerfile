@@ -1,4 +1,4 @@
-FROM node:13.3.0 AS compile-image
+FROM node:12.8.1 AS compile-image
 
 RUN npm install && npm install -g @angular/cli
 
