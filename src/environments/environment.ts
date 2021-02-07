@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  baseUrl: 'https://botlot-backend.azurewebsites.net'
+  baseUrl: 'http://localhost:3000'
 };
 
 /*
