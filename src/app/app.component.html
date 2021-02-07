@@ -7,6 +7,33 @@
       [class.flights-logo--initial]="isLogoInitial">
     BOTLOT
   </h1>
+
+  <div class="csvg-countdown">
+    <h1 class="csvg-title font-cursive"
+        title="Asiunia w Polsce"
+        data-tad-bind="title">
+      Asiunia w Polsce
+    </h1>
+    <div class="csvg-countdown__content">
+      <div class="csvg-digit" data-tad-bind="days">
+        <div id="el_d1" class="csvg-digit-number">{{ dateLeft.getDate() < 10 ? '0' + dateLeft.getDate() : dateLeft.getDate() }}</div>
+        <div id="el_d1t" class="csvg-digit-label">days</div>
+      </div>
+      <div class="csvg-digit" data-tad-bind="hours">
+        <div id="el_h1" class="csvg-digit-number">{{ dateLeft.getHours() < 10 ? '0' + dateLeft.getHours() : dateLeft.getHours() }}</div>
+        <div id="el_h1t" class="csvg-digit-label">hour</div>
+      </div>
+      <div class="csvg-digit" data-tad-bind="minutes">
+        <div id="el_m1" class="csvg-digit-number">{{ dateLeft.getMinutes() < 10 ? '0' + dateLeft.getMinutes() : dateLeft.getMinutes() }}</div>
+        <div id="el_m1t" class="csvg-digit-label">minutes</div>
+      </div>
+      <div class="csvg-digit" data-tad-bind="seconds">
+        <div id="el_s1" class="csvg-digit-number">{{ dateLeft.getSeconds() < 10 ? '0' + dateLeft.getSeconds() : dateLeft.getSeconds() }}</div>
+        <div id="el_s1t" class="csvg-digit-label">seconds</div>
+      </div>
+    </div>
+  </div>
+
   <div class="flights-container">
     <div class="controls">
       <form [formGroup]="formGroup">

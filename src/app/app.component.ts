@@ -41,6 +41,9 @@ export class AppComponent implements OnInit, OnDestroy {
   public isIncompleteVisible = false;
   public citySuggestions$: Observable<CityCodeDto[]>;
 
+  public asiaDate = new Date(2021, 3, 4, 12, 5);
+  public dateLeft = new Date(this.asiaDate.getTime() - new Date().getTime());
+
   private readonly MS_PER_DAY = 1000 * 3600 * 24;
   private readonly formsSubscription = new Subscription();
 
@@ -62,6 +65,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.formGroup.controls.search.valueChanges
       .subscribe(searchTerm => this.search(searchTerm));
     setTimeout(() => this.isLogoInitial = false, 5000);
+    setInterval(() => this.dateLeft = new Date(this.asiaDate.getTime() - new Date().getTime()), 1000);
   }
 
   ngOnDestroy(): void {
