@@ -71,7 +71,7 @@
         </mat-form-field>
         <mat-form-field class="controls__number">
           <input matInput
-                 placeholder="Depart from"
+                 placeholder="Hour Depart From"
                  type="number"
                  min="1"
                  max="23"
@@ -79,7 +79,7 @@
         </mat-form-field>
         <mat-form-field class="controls__number">
           <input matInput
-                 placeholder="Return from"
+                 placeholder="Hour Return From"
                  type="number"
                  min="1"
                  max="23"
@@ -95,6 +95,18 @@
           </mat-select>
         </mat-form-field>
       </form>
+      <mat-checkbox class="mx-3 mt-2"
+                    color="primary"
+                    (change)="sortFlightsByCurrentTotalCost()"
+                    [(ngModel)]="isHotelVisible">
+        Hotels
+      </mat-checkbox>
+      <mat-checkbox class="mx-3 mt-2"
+                    color="primary"
+                    (change)="sortFlightsByCurrentTotalCost()"
+                    [(ngModel)]="isShuttleVisible">
+        Taxis
+      </mat-checkbox>
       <mat-checkbox *ngIf="isIncompleteCheckboxVisible()" class="mx-3 mt-2"
                     color="primary"
                     [(ngModel)]="isIncompleteVisible">
@@ -149,13 +161,7 @@
         </div>
         <div class="flight-cell">
           <strong>Total Cost:&nbsp;</strong>
-          {{
-          flight.summary
-          + ' (' + flight.cost + ' zł + '
-          + (flight.hotel ? flight.hotel.cost : 0) + ' zł + '
-          + (flight.arrival.startTaxiCost || '0') + ' zł + '
-          + (flight.arrival.endTaxiCost || '0') + ' zł)'
-          }}
+          {{ getTotalCostMessageFor(flight) }}
         </div>
         <div class="flight-cell">
           <strong>Hotel:&nbsp;</strong>
@@ -163,5 +169,10 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div *ngIf="progress >= 100"
+       class="footer">
+    Mateusz Staszków Software Development &copy; 2021
   </div>
 </div>

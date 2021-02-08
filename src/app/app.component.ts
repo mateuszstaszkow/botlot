@@ -40,6 +40,8 @@ export class AppComponent implements OnInit, OnDestroy {
   public isLogoInitial = true;
   public isIncompleteVisible = false;
   public citySuggestions$: Observable<CityCodeDto[]>;
+  public isHotelVisible = true;
+  public isShuttleVisible = true;
 
   public asiaDate = new Date(2021, 3, 4, 12, 5);
   public dateLeft = new Date(this.asiaDate.getTime() - new Date().getTime());
@@ -114,11 +116,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.displayedFlights.sort((a, b) => this.sortByFlightAndHotelCost(a, b));
   }
 
+  public sortFlightsByCurrentTotalCost() {
+    this.displayedFlights.sort((a, b) => this.sortByTotalCost(a, b));
+  }
+
   public getPricePerDay(flight: Flight): number {
     const endTimeStamp = new Date(flight.weekend.endDay).getTime();
     const startTimeStamp = new Date(flight.weekend.startDay).getTime();
     const numberOfDays = (endTimeStamp - startTimeStamp) / this.MS_PER_DAY;
-    return Math.round(flight.summary / numberOfDays);
+    const totalCost = this.getTotalCostFor(flight);
+    return Math.round(totalCost / numberOfDays);
   }
 
   public getDayName(flight: Flight): string {
@@ -141,6 +148,34 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public mapToCityAndCountry(cityCode: CityCodeDto): string {
     return cityCode.country ? cityCode.city + ', ' + cityCode.country : cityCode.city;
+  }
+
+  public getTotalCostMessageFor(flight: Flight): string {
+    let distribution = ' zł';
+    if (this.isHotelVisible || this.isShuttleVisible) {
+      distribution += ' (' + flight.cost + ' zł';
+    }
+    if (this.isHotelVisible && flight.hotel) {
+      distribution += ' + ' + flight.hotel.cost + ' zł';
+    }
+    if (this.isShuttleVisible) {
+      distribution += ' + ' + flight.arrival.startTaxiCost + ' zł + ' + flight.arrival.endTaxiCost + ' zł';
+    }
+    if (this.isHotelVisible || this.isShuttleVisible) {
+      distribution += ')';
+    }
+    return this.getTotalCostFor(flight) + distribution;
+  }
+
+  private getTotalCostFor(flight: Flight): number {
+    let total = flight.cost;
+    if (this.isHotelVisible && flight.hotel) {
+      total += flight.hotel.cost;
+    }
+    if (this.isShuttleVisible) {
+      total += (flight.arrival.startTaxiCost + flight.arrival.endTaxiCost);
+    }
+    return total;
   }
 
   private initializeCitySuggestions(): void {
@@ -266,6 +301,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private sortByFlightAndHotelCost(a: Flight, b: Flight): number {
     return this.getSortIndicator(a.cost + a.hotel?.cost, b.cost + b.hotel?.cost);
+  }
+
+  private sortByTotalCost(a: Flight, b: Flight): number {
+    return this.getSortIndicator(this.getTotalCostFor(a), this.getTotalCostFor(b));
   }
 
   private getSortIndicator(aPrice: number, bPrice: number): number {
