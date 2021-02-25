@@ -24,4 +24,10 @@ url: https://botlot-frontend.azurewebsites.net/
 
 #### Example screens:
 
-![logo](./src/assets/images/example-search.jpg)
+![example](./src/assets/images/example-search.jpg)
+
+---
+
+#### Architecture
+
+![architecture](./src/assets/docs/architecture.png)

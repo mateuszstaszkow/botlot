@@ -77,7 +77,7 @@ export class AppComponent implements OnInit, OnDestroy {
   get timeLeft(): string {
     const timeLeft = 3 * this.REQUEST_DEBOUNCE_MS * (100 - this.progress) * this.flightsCount / 100000;
     if (timeLeft > 60) {
-      return (timeLeft / 60).toFixed(0) + ' min ' + (timeLeft % 60) + ' s';
+      return (timeLeft / 60).toFixed(0) + ' min ' + (timeLeft % 60).toFixed(0) + ' s';
     }
     return timeLeft.toFixed(0) + ' s';
   }
