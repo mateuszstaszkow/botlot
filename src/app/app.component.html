@@ -91,6 +91,7 @@
         Flights:&nbsp;
         <strong>{{ displayedFlights.length }}</strong>
       </div>
+      <button mat-raised-button (click)="saveFlights()">Save</button>
     </div>
     <div *ngIf="progress < 100"
          class="my-5 text-center w-100">

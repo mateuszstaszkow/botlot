@@ -7,6 +7,8 @@ import {HotelService} from './hotel.service';
 import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
 
+import * as FileSaver from 'file-saver';
+
 enum SortByType {
   TOTAL = 'TOTAL',
   PRICE_PER_DAY = 'PRICE_PER_DAY',
@@ -90,6 +92,15 @@ export class AppComponent implements OnInit, OnDestroy {
   get completeIncompleteFlights(): number {
     const completeFlightsCount = this.displayedFlights.filter(flight => this.isFlightComplete(flight)).length;
     return this.isIncompleteVisible ? this.flightsCount : completeFlightsCount;
+  }
+
+  public saveFlights(): void {
+    const flights = JSON.stringify(this.displayedFlights, null, 4);
+    const today = new Date().toLocaleDateString();
+    const blob = new Blob([flights], {
+      type: "application/json"
+    });
+    FileSaver.saveAs(blob, today + ".json");
   }
 
   public isIncompleteCheckboxVisible(): boolean {
