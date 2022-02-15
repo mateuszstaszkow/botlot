@@ -1,6 +1,6 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
 import {from, merge, Observable, of, Subject, Subscription} from 'rxjs';
-import {CityCodeDto, Flight} from './model';
+import {CityCodeDto, Flight} from 'src/app/model/model';
 import {FlightService} from './flight.service';
 import {catchError, concatMap, debounceTime, delay, distinctUntilChanged, filter, map, switchMap} from 'rxjs/operators';
 import {HotelService} from './hotel.service';
@@ -8,6 +8,7 @@ import {ShuttleService} from './shuttle.service';
 import {FormControl, FormGroup} from '@angular/forms';
 
 import * as FileSaver from 'file-saver';
+import { FullFlights } from 'src/app/model/full-flights.interface';
 
 enum SortByType {
   TOTAL = 'TOTAL',
@@ -95,12 +96,13 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public saveFlights(): void {
-    const flights = JSON.stringify(this.displayedFlights, null, 4);
+    const data = new FullFlights(this.displayedFlights);
+    const flights = JSON.stringify(data, null, 4);
     const today = new Date().toLocaleDateString();
     const blob = new Blob([flights], {
-      type: "application/json"
+      type: 'application/json'
     });
-    FileSaver.saveAs(blob, today + ".json");
+    FileSaver.saveAs(blob, 'flights_' + today + '.json');
   }
 
   public isIncompleteCheckboxVisible(): boolean {
