@@ -96,7 +96,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public saveFlights(): void {
-    const data = new FullFlights(this.displayedFlights);
+    const data: FullFlights[] = [new FullFlights(this.displayedFlights)];
     const flights = JSON.stringify(data, null, 4);
     const today = new Date().toLocaleDateString();
     const blob = new Blob([flights], {
