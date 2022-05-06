@@ -3,7 +3,8 @@
 # Botlot
 Flights, hotels and taxis aggregation for weekend trips
 
-url: https://botlot-frontend.azurewebsites.net/
+Platform url: https://botlot-frontend.azurewebsites.net/ <br/>
+API url: https://botlot-backend.azurewebsites.net/api/
 
 ---
 
