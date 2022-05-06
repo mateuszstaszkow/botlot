@@ -27,7 +27,7 @@ export class AppComponent implements OnInit, OnDestroy {
   public readonly REQUEST_DEBOUNCE_MS = 500;
   public readonly formGroup = new FormGroup({
     numberOfPeople: new FormControl('2'),
-    numberOfWeekends: new FormControl('48'),
+    numberOfWeekends: new FormControl('1'),
     departFrom: new FormControl('15'),
     returnFrom: new FormControl('10'),
     search: new FormControl(''),
