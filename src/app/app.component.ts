@@ -231,6 +231,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.progress += Math.ceil(100 / this.flightsCount);
       })
     );
+    this.formGroup.controls.numberOfPeople.setValue('2');
   }
 
   private searchFlights(): Observable<Flight> {

@@ -12,6 +12,8 @@
 @media only screen and (min-width: 1000px) {
   .flights-logo {
     width: 100vw;
+    object-fit: cover;
+    object-position: 0 50%;
   }
 }
 
@@ -36,7 +38,7 @@
   .flights-logo:not(.flights-logo--initial) {
     height: 200px !important;
     width: 100vw;
-    object-fit: fill !important;
+    object-fit: cover !important;
     object-position: 0 !important;
   }
 }
@@ -123,8 +125,8 @@
 
   &-logo {
     height: 400px;
-    object-fit: none;
-    object-position: 0 -350px;
+    object-fit: cover;
+    object-position: 0 50%;
 
     &--initial {
       height: 100vh;
